@@ -45,6 +45,19 @@ updates:
       - dependency-name: node-ical
         update-types:
           ["version-update:semver-major", "version-update:semver-minor"]
+      # TypeScript 7 (the native rewrite) stops auto-discovering @types/node in
+      # this pnpm layout. Fixing it means a per-package `types` array — the
+      # shared base can't carry it, since the widget packages are browser-only —
+      # and then re-teaching apps/web about Next's ambient CSS declarations,
+      # which setting `types` disables. A real migration, and TypeScript is a
+      # devDependency: no runtime or security exposure from staying on 5.x.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      # @types/node must track the Node major actually run — 22, per .nvmrc,
+      # the root `engines` field, and the Dockerfile base image. Bumping the
+      # types ahead of the runtime describes APIs that aren't there.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /

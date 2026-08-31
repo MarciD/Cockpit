@@ -18,6 +18,11 @@ at 0.x — minor bumps may still change behaviour.
 
 ### Changed
 
+- `croner` 9 → 10 and `@hookform/resolvers` 3 → 5. Both majors, both verified
+  against the way this repo actually uses them: croner's `(pattern, {name,
+protect}, fn)` constructor still fires and stops, and `zodResolver` still
+  validates a Zod 3 schema — which also unblocks a future Zod 4 migration,
+  since resolvers 5 supports both.
 - `@anthropic-ai/sdk` 0.110 → 0.122. Verified live rather than on green types:
   the beta Tool Runner streams, executes a real tool call against GitLab, and
   `messages.create` still returns a conjugation table.
