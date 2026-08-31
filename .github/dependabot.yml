@@ -11,6 +11,9 @@ updates:
       minor-and-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+        # A 0.x minor is allowed to break, and node-ical's does. Keeping it out
+        # of the group means one breaking dependency can't block the safe ones.
+        exclude-patterns: ["node-ical"]
     ignore:
       # Both of these were merged once and had to be reverted. Patches and
       # minors still come through, so security fixes are not blocked.
@@ -26,6 +29,22 @@ updates:
       # adding python3/make/g++ to the Docker stages.
       - dependency-name: better-sqlite3
         update-types: ["version-update:semver-major"]
+      # Next 16 enables Turbopack by default and rejects the `webpack` config
+      # that externalizes better-sqlite3 / node-ical / fast-xml-parser. Moving
+      # to it means proving Turbopack keeps those out of the server bundle —
+      # a silently bundled native module fails at runtime, not at build time.
+      # 15.x patches and minors still come through, which is what the security
+      # advisories need.
+      - dependency-name: next
+        update-types: ["version-update:semver-major"]
+      # node-ical 0.27 moved its date handling to Temporal, changing the event
+      # types google-calendar.ts reads (`Date` -> `{}`). Probably the right
+      # direction — CLAUDE.md already lists calendar timezone handling as due
+      # for rework — but it needs verifying against real feeds, recurrence and
+      # DST. Patches still come through.
+      - dependency-name: node-ical
+        update-types:
+          ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: github-actions
     directory: /

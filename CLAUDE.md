@@ -101,6 +101,16 @@ contract + a worked example; `SECURITY.md` has the threat model.
   catch it. Migrating means resolvers v5+, rewriting `buildFields` against
   `_zod.def.type`, and re-checking all ten widgets' settings. Dependabot is
   configured to stop proposing the major.
+- **Next stays on 15.** Next 16 enables Turbopack by default and errors on the
+  `webpack()` config in `next.config.mjs` — which is load-bearing: it keeps
+  `better-sqlite3` / `node-ical` / `fast-xml-parser` out of the server bundle,
+  because `serverExternalPackages` alone doesn't cover a dep reached through a
+  transpiled workspace package. Migrating means proving Turbopack keeps them
+  external; a silently bundled native module fails at runtime, not at build time.
+- **node-ical stays on 0.20.** 0.27 moved date handling to Temporal, so the
+  event types `google-calendar.ts` reads change from `Date` to `{}`. Plausibly
+  the right fix for the calendar-timezone rough edge below, but it needs
+  verifying against real feeds, recurrence and DST.
 - **better-sqlite3 stays on v11.** v13 ships no prebuilt binary, so it falls
   back to node-gyp, and the production image has no compiler — the Docker build
   fails at `pnpm install --prod`.

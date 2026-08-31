@@ -18,6 +18,15 @@ at 0.x — minor bumps may still change behaviour.
 
 ### Changed
 
+- `@anthropic-ai/sdk` 0.110 → 0.122. Verified live rather than on green types:
+  the beta Tool Runner streams, executes a real tool call against GitLab, and
+  `messages.create` still returns a conjugation table.
+- Pinned three more dependencies with the reasons recorded in `CLAUDE.md`:
+  `next` (16 defaults to Turbopack and rejects the load-bearing `webpack`
+  config), `node-ical` (0.27's Temporal switch changes the calendar event
+  types), and `node-ical` is excluded from Dependabot's patch group so one
+  breaking dependency can't block the safe ones.
+
 - Reverted two dependency majors that were merged and turned out to break the
   app: `zod` 4 (every widget settings field became a plain text input and the
   form stopped validating) and `better-sqlite3` 13 (no prebuilt binary, so the
