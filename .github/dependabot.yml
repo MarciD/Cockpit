@@ -21,3 +21,9 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    ignore:
+      # The base image tag has to move together with .nvmrc and the root
+      # package.json `engines` field, which Dependabot can't see. Bump Node
+      # deliberately, in all three places, not by merging a bot PR.
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
