@@ -10,7 +10,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.110.0",
+    "@anthropic-ai/sdk": "^0.122.0",
     "@chakra-ui/react": "^3.37.0",
     "@cockpit/db": "workspace:*",
     "@cockpit/integrations": "workspace:*",
@@ -25,7 +25,7 @@
     "react-dom": "^19.2.8",
     "react-grid-layout": "^2.2.4",
     "react-hook-form": "^7.87.0",
-    "zod": "^4.4.3"
+    "zod": "^4.5.1"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",

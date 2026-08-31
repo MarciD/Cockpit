@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@cockpit/widget-sdk": "workspace:*",
-    "zod": "^4.4.3"
+    "zod": "^4.5.1"
   },
   "peerDependencies": {
     "@chakra-ui/react": "^3",
