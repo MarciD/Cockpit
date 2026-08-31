@@ -27,7 +27,7 @@ importers:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: ^0.110.0
-        version: 0.110.0(zod@3.25.76)
+        version: 0.110.0(zod@4.4.3)
       '@chakra-ui/react':
         specifier: ^3.37.0
         version: 3.37.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -71,8 +71,8 @@ importers:
         specifier: ^7.87.0
         version: 7.87.0(react@19.2.8)
       zod:
-        specifier: ^3.25.76
-        version: 3.25.76
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@types/node':
         specifier: ^22.20.1
@@ -145,8 +145,8 @@ importers:
   packages/widget-sdk:
     dependencies:
       zod:
-        specifier: ^3.25.76
-        version: 3.25.76
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@cockpit/project-setup':
         specifier: workspace:*
@@ -170,8 +170,8 @@ importers:
         specifier: workspace:*
         version: link:../widget-sdk
       zod:
-        specifier: ^3.25.76
-        version: 3.25.76
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@chakra-ui/react':
         specifier: ^3.37.0
@@ -1747,17 +1747,17 @@ packages:
     resolution: {integrity: sha512-vIYeF1u3CjlhAFekPPAk2h/Kv4T3mAkMox5OymRiJQB0spDP10LHvt+K7G9Ny6NuuMAb25/6n1qyUjAcGNf/AA==}
     engines: {node: '>= 6'}
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
 snapshots:
 
-  '@anthropic-ai/sdk@0.110.0(zod@3.25.76)':
+  '@anthropic-ai/sdk@0.110.0(zod@4.4.3)':
     dependencies:
       json-schema-to-ts: 3.1.1
       standardwebhooks: 1.1.1
     optionalDependencies:
-      zod: 3.25.76
+      zod: 4.4.3
 
   '@ark-ui/react@5.39.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
@@ -3534,4 +3534,4 @@ snapshots:
 
   yaml@1.10.3: {}
 
-  zod@3.25.76: {}
+  zod@4.4.3: {}
