@@ -6,7 +6,7 @@
 # packages, and Next's file tracing doesn't reliably carry them across pnpm's
 # symlinked node_modules. Installing production deps in the final stage is
 # bigger but predictable, and gets binaries built for the target platform.
-FROM node:22-bookworm-slim AS base
+FROM node:26-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0
