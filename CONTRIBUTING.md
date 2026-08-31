@@ -22,6 +22,19 @@ echo "COCKPIT_SECRET=$(openssl rand -base64 32)" > apps/web/.env.local
 pnpm dev                                  # http://localhost:4000
 ```
 
+`pnpm install` also points `core.hooksPath` at [`.githooks/`](.githooks), so you
+get two local checks:
+
+| Hook         | What it does                                                       | Budget   |
+| ------------ | ------------------------------------------------------------------ | -------- |
+| `pre-commit` | refuses staged secrets or databases, then Prettier on staged files | < 1s     |
+| `pre-push`   | `pnpm check-types`                                                 | ~1s warm |
+
+They are a convenience, not a guarantee — they only run where they are
+installed, so they say nothing about a fork's code. The production build and the
+Docker image deliberately stay in CI, which does see every pull request. If a
+hook is ever in your way, `--no-verify` is there; CI will catch it.
+
 Migrations run at boot, so there is no separate database step. `pnpm --filter
 @cockpit/db db:seed` gives you a demo desk with keyless widgets.
 

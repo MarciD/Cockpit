@@ -132,6 +132,10 @@ contract + a worked example; `SECURITY.md` has the threat model.
   so the production build overwrites the dev server's compiled route chunks and
   unrelated routes start returning 500. Verify with `pnpm check-types` + live
   requests instead; if it happens, kill dev, `rm -rf apps/web/.next`, restart.
+- **Local hooks are in `.githooks/`** (wired by the root `prepare` script):
+  pre-commit blocks staged secrets/databases and Prettier-checks staged files;
+  pre-push runs `check-types`. Neither builds — `next build` clobbers a running
+  dev server's `.next`, and the image build belongs in CI.
 - **After deleting a route**, stale `apps/web/.next/types/**` can fail `check-types`
   — clear `.next/types` (or rebuild).
 - pnpm lives at `~/.local/share/pnpm/bin` — `export PATH="$HOME/.local/share/pnpm/bin:$PATH"`.
