@@ -74,6 +74,25 @@ Breaking one of these breaks the security model or every existing widget:
 - Validate any URL before a server-side fetch — see
   `packages/integrations/src/net.ts`.
 
+## How changes land
+
+`main` is protected by two rulesets. Everyone, including me, goes through a pull
+request:
+
+- **Protected main** — both CI jobs must pass, history stays linear, squash-only,
+  no force pushes or deletions.
+- **Maintainer review** — one approving review from the code owner
+  ([CODEOWNERS](.github/CODEOWNERS)), stale reviews dismissed on a new push, and
+  review threads resolved before merge.
+
+There are no other collaborators, so contributions come from forks. I'm the only
+one who can approve.
+
+The one exception is Dependabot **patch** updates, which merge themselves once CI
+is green. Minors and majors are not automated — several dependencies are 0.x,
+where semver permits a breaking minor, and a green CI run in a repo with no tests
+means "it compiles and boots", not "it still works".
+
 ## Commits and PRs
 
 Short imperative subjects ("add sunrise widget", "fix calendar timezone drift").

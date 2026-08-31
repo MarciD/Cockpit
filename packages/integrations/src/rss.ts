@@ -62,9 +62,10 @@ async function parseFeed(
 ): Promise<NewsItem[]> {
   // Feed URLs come from widget config, i.e. from the client. The route checks
   // them too, but the adapter enforces its own invariant rather than trusting
-  // every future caller to remember.
-  assertPublicHttpUrl(url, "The feed URL");
-  const res = await fetch(url, { signal });
+  // every future caller to remember. Fetch the validated, normalized URL so
+  // what goes out is exactly what was checked.
+  const safe = assertPublicHttpUrl(url, "The feed URL");
+  const res = await fetch(safe, { signal });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const body = (await res.text()).slice(0, MAX_BYTES);
   const doc: unknown = parser.parse(body);

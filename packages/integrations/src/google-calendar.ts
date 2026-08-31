@@ -215,8 +215,8 @@ export async function fetchIcsText(
   signal?: AbortSignal,
 ): Promise<string> {
   // Stored per calendar, and re-fetched by the scheduler every five minutes.
-  assertPublicHttpUrl(url, "The calendar URL");
-  const res = await fetch(url, { signal });
+  const safe = assertPublicHttpUrl(url, "The calendar URL");
+  const res = await fetch(safe, { signal });
   if (!res.ok) throw new Error(`Calendar request failed (HTTP ${res.status})`);
   return res.text();
 }
