@@ -10,7 +10,8 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "check-types": "turbo run check-types",
-    "format": "prettier --write \"**/*.{ts,tsx,mjs,md,json,yaml,yml}\""
+    "format": "prettier --write \"**/*.{ts,tsx,mjs,md,json,yaml,yml}\"",
+    "prepare": "git rev-parse --git-dir > /dev/null 2>&1 && git config core.hooksPath .githooks || true"
   },
   "devDependencies": {
     "prettier": "^3.9.6",

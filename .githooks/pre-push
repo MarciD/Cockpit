@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+#
+# Type-check before the code leaves the machine. Roughly a second with turbo's
+# cache warm. Deliberately NOT the production build or the Docker image: those
+# run in CI, which also sees pull requests from forks, and `next build` shares
+# apps/web/.next with a running dev server.
+set -eu
+
+command -v pnpm >/dev/null 2>&1 || exit 0
+
+printf 'pre-push: type-checking…\n'
+pnpm check-types

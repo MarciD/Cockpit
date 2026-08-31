@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+#
+# Fast checks only — the budget here is under a second. Anything slower gets
+# bypassed with --no-verify and stops being a control.
+#
+# This hook is a convenience, not a guarantee: it runs only on machines that
+# have it installed, so it says nothing about code arriving from a fork. CI is
+# the authority. See CONTRIBUTING.md.
+set -eu
+
+staged() { git diff --cached --name-only --diff-filter=ACMR -z; }
+
+# 1. Secrets and local data. They are gitignored, but `git add -f` overrides
+#    that, and an image once shipped with a real COCKPIT_SECRET in it.
+blocked=$(
+  staged | tr '\0' '\n' | grep -E \
+    '(^|/)\.env($|\.)|\.sqlite($|-)|(^|/)credentials\.enc$|\.pem$|(^|/)id_rsa' \
+    || true
+)
+if [ -n "$blocked" ]; then
+  printf 'pre-commit: these must never be committed:\n' >&2
+  printf '%s\n' "$blocked" | sed 's/^/  /' >&2
+  printf '\nUnstage them (git restore --staged <file>).\n' >&2
+  exit 1
+fi
+
+# 2. Formatting, on staged files only. Fail open if the toolchain is missing —
+#    a GUI git client may not have pnpm on PATH, and CI checks this anyway.
+command -v pnpm >/dev/null 2>&1 || exit 0
+[ -n "$(staged | tr -d '\0')" ] || exit 0
+
+if ! staged | xargs -0 pnpm exec prettier --check --ignore-unknown; then
+  printf '\npre-commit: run `pnpm format`, then stage the result.\n' >&2
+  exit 1
+fi
