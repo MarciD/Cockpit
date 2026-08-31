@@ -1,27 +1,41 @@
-# Never build the maintainer's own data into an image: data/ holds the SQLite
-# database and the encrypted credential file.
+# Docker ignore patterns are NOT recursive: a bare `.env.*` matches only the
+# context root, so anything nested needs an explicit `**/`. Getting that wrong
+# once put apps/web/.env.local — a real COCKPIT_SECRET — inside an image.
+
+# Secrets and local state. Deliberately first, and deliberately over-broad.
+**/.env
+**/.env.*
+!**/env.example
+**/*.pem
+**/*.key
+**/id_rsa*
+
+# The maintainer's own data: the SQLite database and the encrypted credentials.
 data/
+**/data/
+**/*.sqlite
+**/*.sqlite-shm
+**/*.sqlite-wal
 
-node_modules/
+# Dependencies and build output — reinstalled and rebuilt inside the image.
 **/node_modules/
-.next/
 **/.next/
-.turbo/
 **/.turbo/
-dist/
-out/
-*.tsbuildinfo
+**/dist/
+**/out/
+**/*.tsbuildinfo
 
+# Not needed at build or run time.
 .git/
-.github/
 .gitignore
+.gitattributes
+.github/
 .claude/
-.env
-.env.*
-!.env.example
-
 docs/
 ops/
-*.md
-*.log
-.DS_Store
+**/*.md
+**/*.log
+**/.DS_Store
+compose.yaml
+Dockerfile
+.dockerignore

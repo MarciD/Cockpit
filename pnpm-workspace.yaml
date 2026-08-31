@@ -15,3 +15,16 @@ onlyBuiltDependencies:
   - sharp
   - better-sqlite3
   - esbuild
+
+# Transitive advisories whose parent pins a vulnerable version. Each of these
+# is a same-major bump, so the parent's API is unaffected.
+overrides:
+  # next pins postcss exactly; 8.4.31 has a path-traversal and an XSS advisory.
+  postcss: ^8.5.23
+  # node-ical@0.20 depends on uuid@10, which misses a buffer bounds check.
+  uuid: ^11.1.1
+  # drizzle-kit still ships the deprecated @esbuild-kit loader, which pins
+  # esbuild 0.18. The advisory is about esbuild's dev server, which only
+  # `drizzle-kit studio` would ever start, and esbuild never reaches the
+  # production image — but there is no reason to keep a flagged version.
+  esbuild: ^0.25.12

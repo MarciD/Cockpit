@@ -89,11 +89,33 @@ jobs:
           assert "$(code 'http://127.0.0.1:3000/api/news?feed=http://127.0.0.1:3000/api/health')" 400 "SSRF: loopback refused"
           assert "$(code -X POST -H 'Origin: https://evil.test' -H 'content-type: application/json' -d '{}' 'http://127.0.0.1:3000/api/profiles')" 403 "CSRF: cross-origin POST refused"
           assert "$(code -H 'Origin: https://evil.test' 'http://127.0.0.1:3000/api/health')" 403 "CSRF: cross-origin API GET refused"
-          docker rm -f cockpit-secretless >/dev/null 2>&1 || true
-          docker run --name cockpit-secretless cockpit:ci > /tmp/out.log 2>&1 || true
+
+      # A misconfigured server must stop, not linger as a container Docker
+      # still reports as running but that can never serve.
+      - name: Refuses to start without COCKPIT_SECRET
+        run: |
+          set -e
+          if timeout 120 docker run --rm --name cockpit-secretless cockpit:ci > /tmp/out.log 2>&1; then
+            echo "FAIL: exited 0 without a secret"; cat /tmp/out.log; exit 1
+          fi
           grep -q "COCKPIT_SECRET is not set" /tmp/out.log \
-            && echo "ok   refuses to boot without COCKPIT_SECRET" \
-            || { echo "FAIL: booted without COCKPIT_SECRET"; cat /tmp/out.log; exit 1; }
+            && echo "ok   refused to start, non-zero exit" \
+            || { echo "FAIL: wrong failure"; cat /tmp/out.log; exit 1; }
+
+      # .dockerignore patterns are not recursive, and getting that wrong once
+      # copied a real apps/web/.env.local into an image. Never again silently.
+      - name: Image carries no secrets or local data
+        run: |
+          set -e
+          found=$(docker run --rm cockpit:ci sh -c 'find /app \
+            \( -name ".env" -o -name ".env.*" -o -name "*.sqlite*" \
+               -o -name "credentials.enc" -o -name "*.pem" -o -name "id_rsa*" \) \
+            -not -path "*/node_modules/*" 2>/dev/null')
+          if [ -n "$found" ]; then
+            echo "FAIL: the image contains files that must never ship:"; echo "$found"; exit 1
+          fi
+          docker run --rm cockpit:ci sh -c 'test ! -d /app/.git && test ! -d /app/data'
+          echo "ok   no env files, databases, keys, .git or data/ in the image"
 
       - name: Container logs
         if: always()

@@ -7,6 +7,22 @@ at 0.x — minor bumps may still change behaviour.
 
 ## [Unreleased]
 
+### Fixed
+
+- `.dockerignore` patterns are not recursive, so a nested `.env.local` was
+  copied into locally built images. Every pattern is now `**/`-anchored, and CI
+  asserts that a built image contains no env files, databases, keys or `.git`.
+- A failed boot (a missing `COCKPIT_SECRET`, say) left the process alive, so
+  Docker reported a container as running that could never serve. It now exits
+  non-zero, and CI asserts that too.
+
+### Security
+
+- Every dependency advisory on the default branch closed: `next` 15.5.24,
+  `drizzle-orm` 0.45.2, `fast-xml-parser` 5.11.1, `sharp` 0.35.4, plus
+  `postcss`, `uuid` and `esbuild` via pinned overrides where a parent held them
+  back.
+
 ## [0.1.0] — 2026-08-31
 
 First public release. cockpit had been in daily private use for a while; this is
