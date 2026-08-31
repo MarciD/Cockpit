@@ -1,5 +1,10 @@
 # cockpit
 
+[![CI](https://github.com/MarciD/Cockpit/actions/workflows/ci.yml/badge.svg)](https://github.com/MarciD/Cockpit/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/MarciD/Cockpit?sort=semver&color=c65a34)](https://github.com/MarciD/Cockpit/releases)
+[![Image](https://img.shields.io/badge/ghcr.io-marcid%2Fcockpit-c65a34)](https://github.com/MarciD/Cockpit/pkgs/container/cockpit)
+[![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-lightgrey)](LICENSE)
+
 A local-first personal dashboard. One page per "desk" — a job, a side project,
 personal life — each a grid of configurable widgets, plus a Claude assistant that
 answers over what's actually on screen.
@@ -37,6 +42,15 @@ docker compose up -d --build
 
 Open <http://127.0.0.1:3000>. The first screen creates a desk; then add widgets
 and connect them. Migrations run on boot, so there is no setup step.
+
+Or skip the build and take the published multi-arch image
+(`linux/amd64` + `linux/arm64`, with build provenance):
+
+```sh
+docker run -d --name cockpit -p 127.0.0.1:3000:3000 \
+  -e COCKPIT_SECRET="$(openssl rand -base64 32)" -e TZ=Europe/Berlin \
+  -v cockpit-data:/data ghcr.io/marcid/cockpit:latest
+```
 
 Running it natively instead, or behind a reverse proxy, or as a macOS
 LaunchAgent: [docs/self-hosting.md](docs/self-hosting.md).
@@ -135,8 +149,9 @@ Verification is `pnpm check-types`, `pnpm build`, and driving the app.
 
 Built for one person's daily use, and shaped by that. It works, it's used every
 day, and it has rough edges — the honest list lives in
-[CLAUDE.md](CLAUDE.md#known-rough-edges--todo). Issues and widget contributions
-are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
+[CLAUDE.md](CLAUDE.md#known-rough-edges--todo). Releases and what changed are in
+[CHANGELOG.md](CHANGELOG.md). Issues and widget contributions are welcome; see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

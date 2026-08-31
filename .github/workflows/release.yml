@@ -1,0 +1,146 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+# GHCR only accepts a lowercase path, and github.repository is "MarciD/Cockpit".
+env:
+  IMAGE: ghcr.io/marcid/cockpit
+
+permissions:
+  contents: read
+
+jobs:
+  # Build each architecture on its own native runner and push by digest. Native
+  # beats QEMU by an order of magnitude for a Next build plus native modules.
+  build:
+    name: build ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          # Provenance is attested once, on the manifest list, in `publish`.
+          provenance: false
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+
+      - name: Record the digest
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: digest-${{ strategy.job-index }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # One manifest list spanning both architectures, tagged, attested, released.
+  publish:
+    name: publish manifest
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # the GitHub release
+      packages: write
+      id-token: write # provenance attestation
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: /tmp/digests
+          pattern: digest-*
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tags and labels
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Create the manifest list
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.IMAGE }}@sha256:%s ' *)
+
+      - name: Read back the published digest
+        id: digest
+        run: |
+          digest=$(docker buildx imagetools inspect \
+            "${{ env.IMAGE }}:${{ steps.meta.outputs.version }}" \
+            --format '{{ json .Manifest }}' | jq -r .digest)
+          echo "value=$digest" >> "$GITHUB_OUTPUT"
+          echo "published $digest"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.digest.outputs.value }}
+          push-to-registry: true
+
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          DIGEST: ${{ steps.digest.outputs.value }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "release $TAG already exists"
+            exit 0
+          fi
+          # Let GitHub write the commit list, then prepend how to run it.
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --title "$TAG" --generate-notes
+          generated=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body -q .body)
+          {
+            printf '```sh\ndocker pull %s:%s\n```\n\n' "$IMAGE" "$VERSION"
+            printf 'linux/amd64 + linux/arm64 · digest `%s` · build provenance attested.\n\n' "$DIGEST"
+            printf '%s\n' "$generated"
+          } > /tmp/notes.md
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file /tmp/notes.md

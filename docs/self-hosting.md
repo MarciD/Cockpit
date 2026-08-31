@@ -8,6 +8,18 @@ your own machine. Pick one.
 
 ## Docker
 
+Two ways in. The published image is multi-arch (`linux/amd64` + `linux/arm64`)
+and carries a build-provenance attestation you can verify:
+
+```sh
+gh attestation verify --owner MarciD oci://ghcr.io/marcid/cockpit:latest
+docker run -d --name cockpit -p 127.0.0.1:3000:3000 \
+  -e COCKPIT_SECRET="$(openssl rand -base64 32)" -e TZ=Europe/Berlin \
+  -v cockpit-data:/data ghcr.io/marcid/cockpit:latest
+```
+
+Or build from a checkout, which is what `compose.yaml` does:
+
 ```sh
 git clone git@github.com:MarciD/Cockpit.git cockpit
 cd cockpit

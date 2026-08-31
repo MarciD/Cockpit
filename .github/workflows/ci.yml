@@ -6,11 +6,12 @@ on:
   pull_request:
   workflow_dispatch:
 
-# A new push to the same branch supersedes the running job.
+# A newer push to the same ref supersedes the running job.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege by default; jobs opt into more where they need it.
 permissions:
   contents: read
 
@@ -19,11 +20,11 @@ jobs:
     name: format · types · build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -37,7 +38,7 @@ jobs:
         run: pnpm check-types
 
       # No COCKPIT_SECRET here on purpose: the credential store is built lazily,
-      # so a build must not need a runtime secret.
+      # so a build must never need a runtime secret.
       - name: Build
         run: pnpm build
 
@@ -45,12 +46,12 @@ jobs:
     name: docker image
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
       - name: Build image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           push: false
@@ -59,21 +60,56 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # The image is only useful if it actually serves; boot it and probe the
-      # health endpoint the compose healthcheck uses.
+      # An image that builds but doesn't serve is not a passing build. Boot it
+      # and probe the same endpoint the compose healthcheck uses.
       - name: Boot it and check health
         run: |
           docker run -d --name cockpit-ci -p 3000:3000 \
             -e COCKPIT_SECRET=ci-only-not-a-real-secret \
             cockpit:ci
-          for i in $(seq 1 30); do
+          for i in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:3000/api/health; then
               echo; echo "healthy after ${i}s"; exit 0
             fi
             sleep 1
           done
-          echo "never became healthy"; docker logs cockpit-ci; exit 1
+          echo "never became healthy"; exit 1
+
+      # The guards are the reason this app can be run at all; a regression here
+      # is silent otherwise.
+      - name: Security guards still hold
+        run: |
+          set -e
+          code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
+          assert() {
+            if [ "$1" != "$2" ]; then echo "FAIL $3: got $1, want $2"; exit 1; fi
+            echo "ok   $3"
+          }
+          assert "$(code 'http://127.0.0.1:3000/api/news?feed=http://169.254.169.254/')" 400 "SSRF: metadata IP refused"
+          assert "$(code 'http://127.0.0.1:3000/api/news?feed=http://127.0.0.1:3000/api/health')" 400 "SSRF: loopback refused"
+          assert "$(code -X POST -H 'Origin: https://evil.test' -H 'content-type: application/json' -d '{}' 'http://127.0.0.1:3000/api/profiles')" 403 "CSRF: cross-origin POST refused"
+          assert "$(code -H 'Origin: https://evil.test' 'http://127.0.0.1:3000/api/health')" 403 "CSRF: cross-origin API GET refused"
+          docker rm -f cockpit-secretless >/dev/null 2>&1 || true
+          docker run --name cockpit-secretless cockpit:ci > /tmp/out.log 2>&1 || true
+          grep -q "COCKPIT_SECRET is not set" /tmp/out.log \
+            && echo "ok   refuses to boot without COCKPIT_SECRET" \
+            || { echo "FAIL: booted without COCKPIT_SECRET"; cat /tmp/out.log; exit 1; }
 
       - name: Container logs
         if: always()
         run: docker logs cockpit-ci || true
+
+  dependencies:
+    name: dependency review
+    # Only meaningful on a PR: it diffs the manifest against the base branch.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure

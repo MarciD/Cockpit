@@ -1,0 +1,52 @@
+# Changelog
+
+Notable changes per release. Format loosely follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions are
+[semver](https://semver.org/), with the caveat that this is a personal project
+at 0.x — minor bumps may still change behaviour.
+
+## [Unreleased]
+
+## [0.1.0] — 2026-08-31
+
+First public release. cockpit had been in daily private use for a while; this is
+the point it became something someone else could run.
+
+### Added
+
+- Desks: create, rename, recolour and delete pages of widgets, with a two-letter
+  rail monogram per desk. cockpit ships with none — the first run creates one.
+- Ten widgets: GitLab merge requests (with approval and reviewer state), Jira
+  issues, calendar (multiple iCal feeds), weather, news, to-dos, recurring tasks,
+  a config-only custom API tile, a read-only Claude assistant, and a
+  language-learning trainer with its own full page.
+- A `defineWidget()` contract with an auto-generated settings form, a
+  stale-while-revalidate cache over SQLite, and a desk-scoped signal bus that
+  feeds each widget's one-line summary to the assistant.
+- Per-widget credential connections, shared by provider, encrypted at rest with
+  AES-256-GCM under `COCKPIT_SECRET` and readable only inside `/api/*` handlers.
+- Docker: one container, one volume, migrations on boot, published multi-arch to
+  `ghcr.io/marcid/cockpit` with build provenance.
+- Optional `COCKPIT_ACCESS_TOKEN` gate, so serving the app to a LAN is
+  defensible rather than reckless.
+- Documentation: architecture, a widget-building guide with a worked example,
+  self-hosting, and a threat model that states the limits plainly.
+
+### Security
+
+- `COCKPIT_SECRET` is mandatory. Earlier revisions fell back to a hardcoded
+  passphrase, which would have been published with this source; any record still
+  encrypted under it is transparently re-encrypted on first read.
+- Server-side fetches of client-supplied URLs (RSS feeds, iCal addresses) reject
+  loopback, private, link-local and cloud-metadata hosts. Operator-supplied
+  provider base URLs still allow private hosts, since a self-hosted GitLab is a
+  normal setup.
+- A same-origin check refuses cross-origin state-changing requests and any
+  cross-site `/api/*` request, so a page you visit cannot drive your dashboard.
+- Credential-file writes are serialized; concurrent read-modify-write cycles
+  could previously clobber each other.
+- `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` and
+  `Permissions-Policy` are set on every response.
+
+[Unreleased]: https://github.com/MarciD/Cockpit/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/MarciD/Cockpit/releases/tag/v0.1.0
