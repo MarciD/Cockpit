@@ -17,9 +17,13 @@ function slugify(name: string): string {
     .replace(/[\u0300-\u036f]/g, "") // strip NFKD combining marks
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
     .slice(0, 40);
-  return base || "desk";
+  // Trimming the separators with an anchored `-+$` would backtrack; a slice is
+  // clearer anyway.
+  const trimmed = base.replace(/^-+/, "");
+  let out = trimmed;
+  while (out.endsWith("-")) out = out.slice(0, -1);
+  return out || "desk";
 }
 
 export async function GET() {

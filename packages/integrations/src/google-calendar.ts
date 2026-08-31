@@ -1,5 +1,6 @@
 import ical from "node-ical";
 import { DateTime } from "luxon";
+import { assertPublicHttpUrl } from "./net";
 
 export type CalendarSourceKind = "google" | "outlook" | "ical";
 
@@ -213,6 +214,8 @@ export async function fetchIcsText(
   url: string,
   signal?: AbortSignal,
 ): Promise<string> {
+  // Stored per calendar, and re-fetched by the scheduler every five minutes.
+  assertPublicHttpUrl(url, "The calendar URL");
   const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`Calendar request failed (HTTP ${res.status})`);
   return res.text();

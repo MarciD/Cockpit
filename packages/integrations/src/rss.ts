@@ -1,4 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
+import { assertPublicHttpUrl } from "./net";
 
 export interface NewsConfig {
   feeds: string[];
@@ -59,6 +60,10 @@ async function parseFeed(
   url: string,
   signal?: AbortSignal,
 ): Promise<NewsItem[]> {
+  // Feed URLs come from widget config, i.e. from the client. The route checks
+  // them too, but the adapter enforces its own invariant rather than trusting
+  // every future caller to remember.
+  assertPublicHttpUrl(url, "The feed URL");
   const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const body = (await res.text()).slice(0, MAX_BYTES);

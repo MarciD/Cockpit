@@ -16,10 +16,10 @@ export interface JiraConfig {
  * the endpoint rather than point at a different server.
  */
 function jiraHost(site: string): string {
-  const host = site
-    .trim()
-    .replace(/^https?:\/\//, "")
-    .replace(/\/+$/, "");
+  let host = site.trim().replace(/^https?:\/\//, "");
+  // Not a regex: an anchored `\/+$` backtracks polynomially on a long run of
+  // slashes, and this string comes from stored configuration.
+  while (host.endsWith("/")) host = host.slice(0, -1);
   if (!/^[a-z0-9.-]+(:\d+)?$/i.test(host)) {
     throw new BlockedUrlError(
       `"${site}" is not a valid Jira site host (expected e.g. your-org.atlassian.net).`,
