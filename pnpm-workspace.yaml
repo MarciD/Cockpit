@@ -1,0 +1,17 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Native deps allowed to run install scripts:
+#   sharp          → Next.js image optimization
+#   better-sqlite3 → local SQLite database
+#   esbuild        → used by tsx / drizzle-kit
+allowBuilds:
+  sharp: true
+  better-sqlite3: true
+  esbuild: true
+
+onlyBuiltDependencies:
+  - sharp
+  - better-sqlite3
+  - esbuild

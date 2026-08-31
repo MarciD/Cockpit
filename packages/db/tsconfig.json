@@ -1,0 +1,8 @@
+{
+  "extends": "@cockpit/project-setup/tsconfig/base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "noEmit": true
+  },
+  "include": ["src", "drizzle.config.ts"]
+}

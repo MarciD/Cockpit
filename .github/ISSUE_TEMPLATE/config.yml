@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/MarciD/Cockpit/security/advisories/new
+    about: Report privately, never as a public issue.
+  - name: Self-hosting and configuration
+    url: https://github.com/MarciD/Cockpit/blob/main/docs/self-hosting.md
+    about: Docker, environment variables, backups, reverse proxies, troubleshooting.
+  - name: Building a widget
+    url: https://github.com/MarciD/Cockpit/blob/main/docs/widgets.md
+    about: The widget contract and a full worked example.

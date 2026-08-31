@@ -1,0 +1,38 @@
+name: Idea or widget request
+description: Suggest a widget, an integration, or a change.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        cockpit is a personal project, so I'm selective about what I take on —
+        but ideas are welcome, and the widget layer is built to be extended. If
+        you're happy to build it yourself, say so: see
+        [docs/widgets.md](https://github.com/MarciD/Cockpit/blob/main/docs/widgets.md).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to see or do?
+      description: The need, rather than the implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: How you'd imagine it working
+      description: A widget? A change to an existing one? Something else?
+
+  - type: input
+    id: provider
+    attributes:
+      label: Provider and API
+      description: For an integration — which service, and a link to its API docs.
+
+  - type: checkboxes
+    id: offer
+    attributes:
+      label: Would you like to build it?
+      options:
+        - label: I'd be up for opening a PR

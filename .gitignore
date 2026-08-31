@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+
+# build outputs
+.next/
+dist/
+.turbo/
+out/
+*.tsbuildinfo
+
+# local data (SQLite + encrypted credentials live here; never commit)
+data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# env / secrets (the committed template is env.example)
+.env
+.env.*
+
+# agent / editor local state
+.claude/
+
+# misc
+.DS_Store
+*.log

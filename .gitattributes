@@ -1,0 +1,5 @@
+* text=auto eol=lf
+
+pnpm-lock.yaml -diff linguist-generated
+packages/db/drizzle/meta/*.json -diff linguist-generated
+LICENSE linguist-generated

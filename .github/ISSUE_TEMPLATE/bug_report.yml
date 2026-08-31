@@ -1,0 +1,67 @@
+name: Bug report
+description: Something is broken or behaves unexpectedly.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please don't include tokens, secret iCal URLs, or
+        the contents of `credentials.enc` — redact them.
+
+        **Found a security issue?** Don't file it here: use
+        Security → Report a vulnerability. See
+        [SECURITY.md](https://github.com/MarciD/Cockpit/blob/main/SECURITY.md).
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what happened instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Add the … widget
+        2. Open its settings and …
+        3. …
+    validations:
+      required: true
+
+  - type: dropdown
+    id: how
+    attributes:
+      label: How are you running it?
+      options:
+        - Docker (docker compose)
+        - Native (pnpm start)
+        - Dev server (pnpm dev)
+        - macOS LaunchAgent
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Commit SHA or tag (`git rev-parse --short HEAD`).
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        `docker compose logs cockpit`, or the server output. Browser console too
+        if it's a rendering problem.
+      render: shell
+
+  - type: input
+    id: env
+    attributes:
+      label: OS and browser
+      placeholder: macOS 15.3, Safari 18 / Ubuntu 24.04, Firefox 133

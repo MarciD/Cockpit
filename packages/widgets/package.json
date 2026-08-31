@@ -1,0 +1,31 @@
+{
+  "name": "@cockpit/widgets",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/registry.ts",
+    "./language-learning/page": "./src/language-learning/page/full-page.tsx"
+  },
+  "types": "./src/registry.ts",
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cockpit/widget-sdk": "workspace:*",
+    "zod": "^3.24.1"
+  },
+  "peerDependencies": {
+    "@chakra-ui/react": "^3",
+    "@tanstack/react-query": "^5",
+    "react": "^19"
+  },
+  "devDependencies": {
+    "@chakra-ui/react": "^3.2.3",
+    "@cockpit/project-setup": "workspace:*",
+    "@tanstack/react-query": "^5.62.11",
+    "@types/react": "^19.0.2",
+    "react": "^19.0.0",
+    "typescript": "^5.7.3"
+  }
+}

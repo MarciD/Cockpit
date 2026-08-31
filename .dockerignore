@@ -1,0 +1,27 @@
+# Never build the maintainer's own data into an image: data/ holds the SQLite
+# database and the encrypted credential file.
+data/
+
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+.turbo/
+**/.turbo/
+dist/
+out/
+*.tsbuildinfo
+
+.git/
+.github/
+.gitignore
+.claude/
+.env
+.env.*
+!.env.example
+
+docs/
+ops/
+*.md
+*.log
+.DS_Store

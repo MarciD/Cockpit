@@ -1,0 +1,26 @@
+# cockpit — one container, one volume.
+#
+# The port is published on 127.0.0.1 only: cockpit has no authentication unless
+# COCKPIT_ACCESS_TOKEN is set. To reach it from a phone or another machine, set
+# that token and change the mapping to "3000:3000". See SECURITY.md.
+#
+# Run exactly one container: the scheduler has no cross-process lock, so
+# replicas would each run every cron job against the same SQLite file.
+services:
+  cockpit:
+    build: .
+    image: cockpit
+    container_name: cockpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${COCKPIT_PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      # Calendars and the scheduler read the server's timezone.
+      TZ: ${TZ:-UTC}
+    volumes:
+      - cockpit-data:/data
+
+volumes:
+  cockpit-data:

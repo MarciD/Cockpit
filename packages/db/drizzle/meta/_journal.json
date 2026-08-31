@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1783514979190,
+      "tag": "0000_reflective_fenris",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1783605563466,
+      "tag": "0001_abnormal_absorbing_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1783687271600,
+      "tag": "0002_shallow_guardian",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1783927042558,
+      "tag": "0003_busy_venom",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1783956596810,
+      "tag": "0004_wide_calypso",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1784010898660,
+      "tag": "0005_aromatic_annihilus",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1788188112658,
+      "tag": "0006_fuzzy_jocasta",
+      "breakpoints": true
+    }
+  ]
+}

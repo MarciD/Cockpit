@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchAgent template for cockpit (macOS). Keeps `next start` — and with it the
+  in-process croner scheduler — alive so background refreshes fire even when the
+  browser is closed. See ops/launchd/README.md for the one-liner that fills in
+  the __PLACEHOLDERS__ and installs this.
+
+  Docker is the simpler option for most people; this exists for running cockpit
+  natively on a Mac. See docs/self-hosting.md.
+-->
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>cockpit</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>__PNPM_BIN__</string>
+      <string>-C</string>
+      <string>__COCKPIT_DIR__/apps/web</string>
+      <string>start</string>
+      <string>-p</string>
+      <string>3000</string>
+      <!-- Drop the two lines below to serve the whole LAN instead of just this
+           Mac. Only do that with COCKPIT_ACCESS_TOKEN set — cockpit has no
+           other authentication. See SECURITY.md. -->
+      <string>-H</string>
+      <string>127.0.0.1</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>__COCKPIT_DIR__</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>NODE_ENV</key>
+      <string>production</string>
+      <key>PORT</key>
+      <string>3000</string>
+      <key>PATH</key>
+      <string>__PNPM_DIR__:/usr/local/bin:/usr/bin:/bin</string>
+      <!-- Required: the passphrase that encrypts data/credentials.enc.
+           Generate one with `openssl rand -base64 32`. -->
+      <key>COCKPIT_SECRET</key>
+      <string>__COCKPIT_SECRET__</string>
+      <!-- Optional extras:
+           COCKPIT_ACCESS_TOKEN  gate the whole app behind a shared token
+           COCKPIT_USER_NAME     name used in greetings
+           COCKPIT_KEYCHAIN=1    store secrets in the macOS Keychain instead -->
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>__COCKPIT_DIR__/data/cockpit.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>__COCKPIT_DIR__/data/cockpit.err.log</string>
+  </dict>
+</plist>

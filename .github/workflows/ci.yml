@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A new push to the same branch supersedes the running job.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: format · types · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Prettier
+        run: pnpm exec prettier --check "**/*.{ts,tsx,mjs,md,json,yaml,yml}"
+
+      - name: Types
+        run: pnpm check-types
+
+      # No COCKPIT_SECRET here on purpose: the credential store is built lazily,
+      # so a build must not need a runtime secret.
+      - name: Build
+        run: pnpm build
+
+  docker:
+    name: docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: cockpit:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The image is only useful if it actually serves; boot it and probe the
+      # health endpoint the compose healthcheck uses.
+      - name: Boot it and check health
+        run: |
+          docker run -d --name cockpit-ci -p 3000:3000 \
+            -e COCKPIT_SECRET=ci-only-not-a-real-secret \
+            cockpit:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/api/health; then
+              echo; echo "healthy after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "never became healthy"; docker logs cockpit-ci; exit 1
+
+      - name: Container logs
+        if: always()
+        run: docker logs cockpit-ci || true

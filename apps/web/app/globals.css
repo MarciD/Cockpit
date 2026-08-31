@@ -1,0 +1,46 @@
+/* Vendor-prefixed font smoothing — kept out of the JS theme (not in Chakra's
+   typed style object). Crisp text on macOS to match the Braun/Apple register. */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* The rules below live in this un-layered stylesheet (rather than the Chakra
+   theme's globalCss) so they reliably win over Chakra's cascade layers and the
+   un-layered react-grid-layout vendor CSS. */
+
+/* A11y: a visible keyboard focus ring on every interactive element. */
+:where(a, button, [role="button"], input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent, #d0552f);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* react-grid-layout: replace the vendor red placeholder + base64 resize handle. */
+.cockpit-grid .react-grid-item.react-grid-placeholder {
+  background: var(--accent, #d0552f);
+  opacity: 0.12;
+  border-radius: 13px;
+}
+.cockpit-grid .react-grid-item.react-draggable-dragging {
+  box-shadow: 0 12px 28px rgba(120, 95, 60, 0.22);
+  z-index: 3;
+}
+.cockpit-grid .react-resizable-handle {
+  background-image: none;
+}
+.cockpit-grid .react-resizable-handle::after {
+  border-color: #c7bfad;
+}
+
+/* Respect reduced-motion: kill the hue-wash + FAB/dialog/hover transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
