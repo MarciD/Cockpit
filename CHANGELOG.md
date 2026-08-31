@@ -16,6 +16,14 @@ at 0.x — minor bumps may still change behaviour.
   Docker reported a container as running that could never serve. It now exits
   non-zero, and CI asserts that too.
 
+### Changed
+
+- Reverted two dependency majors that were merged and turned out to break the
+  app: `zod` 4 (every widget settings field became a plain text input and the
+  form stopped validating) and `better-sqlite3` 13 (no prebuilt binary, so the
+  production image cannot build). Both are documented in `CLAUDE.md` and
+  Dependabot no longer proposes the major.
+
 ### Security
 
 - Every dependency advisory on the default branch closed: `next` 15.5.24,

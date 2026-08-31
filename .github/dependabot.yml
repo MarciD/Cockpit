@@ -11,6 +11,21 @@ updates:
       minor-and-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    ignore:
+      # Both of these were merged once and had to be reverted. Patches and
+      # minors still come through, so security fixes are not blocked.
+      #
+      # zod 4 removes `_def.typeName`, which the auto-generated widget settings
+      # form introspects, and @hookform/resolvers v3's zodResolver throws on a
+      # v4 schema. Migrating means resolvers v5+, rewriting buildFields against
+      # `_zod.def.type`, and re-checking every widget's settings form.
+      - dependency-name: zod
+        update-types: ["version-update:semver-major"]
+      # better-sqlite3 13 ships no prebuilt binary, so it falls back to
+      # node-gyp and the production image has no compiler. Taking it means
+      # adding python3/make/g++ to the Docker stages.
+      - dependency-name: better-sqlite3
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /

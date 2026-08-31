@@ -93,6 +93,17 @@ contract + a worked example; `SECURITY.md` has the threat model.
   (raw JSON Schema, `as const` on the schema) from `@anthropic-ai/sdk/helpers/beta/json-schema`.
   Get SDK/model specifics from the bundled `claude-api` skill; model tiers:
   `fast`→`claude-haiku-4-5`, `balanced`→`claude-sonnet-5`, `deep`→`claude-opus-4-8`.
+- **Zod stays on v3, deliberately.** `widget-config-form.tsx` builds the
+  settings form by reading `_def.typeName` off each schema field, which Zod 4
+  removes, and `@hookform/resolvers@3`'s `zodResolver` throws outright on a v4
+  schema. A v4 bump therefore turns every widget setting into a plain text
+  input _and_ stops the form validating — with no type error and no test to
+  catch it. Migrating means resolvers v5+, rewriting `buildFields` against
+  `_zod.def.type`, and re-checking all ten widgets' settings. Dependabot is
+  configured to stop proposing the major.
+- **better-sqlite3 stays on v11.** v13 ships no prebuilt binary, so it falls
+  back to node-gyp, and the production image has no compiler — the Docker build
+  fails at `pnpm install --prod`.
 - **`structuredCall` output is NOT schema-validated.** The API treats `input_schema`
   as a hint, not a contract — the model (esp. `fast`/Haiku) can omit a `required`
   field or return the wrong type. `structuredCall<T>` just casts `block.input as T`.
