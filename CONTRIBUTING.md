@@ -101,10 +101,16 @@ request:
 There are no other collaborators, so contributions come from forks. I'm the only
 one who can approve.
 
-The one exception is Dependabot **patch** updates, which merge themselves once CI
-is green. Minors and majors are not automated — several dependencies are 0.x,
-where semver permits a breaking minor, and a green CI run in a repo with no tests
-means "it compiles and boots", not "it still works".
+The one exception is Dependabot's **`stable`** group — minors and patches of
+dependencies at 1.0 or above — which merges itself once CI is green. Below 1.0
+semver permits a breaking minor, and one has broken this repo (`drizzle-orm`
+0.38 → 0.45), so those arrive as a separate `pre-1-0` PR. That group and every
+major stay manual: a green CI run in a repo with no tests means "it compiles and
+boots", not "it still works".
+
+Dependabot bypasses the review ruleset but not the status-check one, which is
+why the two are separate — a bypass actor is exempt from _every_ rule in its own
+ruleset, so folding them together would let a bot merge without CI.
 
 ## Commits and PRs
 

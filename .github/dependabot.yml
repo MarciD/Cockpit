@@ -6,14 +6,37 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     groups:
-      # One PR for the routine patch/minor churn; majors stay separate so they
-      # get read properly.
-      minor-and-patch:
+      # Split on whether semver actually promises anything, because that is what
+      # decides whether a bump is allowed to merge itself. Majors are never
+      # grouped, so they always arrive as their own PR.
+      #
+      # At 1.0 and above a minor is additive by contract, so the routine churn
+      # rides in one PR that merges itself once CI is green — see
+      # .github/workflows/dependabot-automerge.yml, which gates on this group's
+      # name.
+      stable:
         patterns: ["*"]
+        # Kept in step with `pre-1-0` below by hand. Dependabot's config parser
+        # is not documented to support YAML anchors, and an exclude list that
+        # silently failed to parse would auto-merge precisely the bumps this
+        # split exists to hold back.
+        exclude-patterns:
+          - "@anthropic-ai/sdk"
+          - "drizzle-kit"
+          - "drizzle-orm"
+          - "node-ical"
         update-types: ["minor", "patch"]
-        # A 0.x minor is allowed to break, and node-ical's does. Keeping it out
-        # of the group means one breaking dependency can't block the safe ones.
-        exclude-patterns: ["node-ical"]
+      # Below 1.0 semver permits a minor to break, and here one did: drizzle-orm
+      # 0.38 -> 0.45. These land as their own PR and stay manual, so a breaking
+      # dependency can neither block the safe ones nor merge itself on a green
+      # type-check.
+      pre-1-0:
+        patterns:
+          - "@anthropic-ai/sdk"
+          - "drizzle-kit"
+          - "drizzle-orm"
+          - "node-ical"
+        update-types: ["minor", "patch"]
     ignore:
       # Both of these were merged once and had to be reverted. Patches and
       # minors still come through, so security fixes are not blocked.
@@ -41,7 +64,7 @@ updates:
       # types google-calendar.ts reads (`Date` -> `{}`). Probably the right
       # direction — CLAUDE.md already lists calendar timezone handling as due
       # for rework — but it needs verifying against real feeds, recurrence and
-      # DST. Patches still come through.
+      # DST. Patches still come through, in the `pre-1-0` group.
       - dependency-name: node-ical
         update-types:
           ["version-update:semver-major", "version-update:semver-minor"]

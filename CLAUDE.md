@@ -142,6 +142,19 @@ contract + a worked example; `SECURITY.md` has the threat model.
   so the production build overwrites the dev server's compiled route chunks and
   unrelated routes start returning 500. Verify with `pnpm check-types` + live
   requests instead; if it happens, kill dev, `rm -rf apps/web/.next`, restart.
+- **Dependabot auto-merge has two non-obvious tripwires.** `fetch-metadata`
+  reports the _highest_ bump in a grouped PR, so gating on
+  `version-update:semver-patch` never fires while updates are grouped — gate on
+  the `dependency-group` name (`stable`) instead. And GitHub turns
+  `require_extra_approval_for_unattributed_changes` on by default in every
+  ruleset, new and existing: it demands one approval _more_ than configured for
+  a bot-authored PR, which a single-maintainer repo can never supply. Read the
+  effective rules with `gh api repos/{owner}/{repo}/rules/branches/main` — the
+  per-ruleset view hides that rulesets aggregate to the most restrictive. The
+  review and status-check rulesets are deliberately separate: a bypass actor is
+  exempt from every rule in its own ruleset, so `dependabot[bot]` bypasses the
+  code-owner approval and still has to pass CI. Ruleset writes are
+  `PUT /repos/{owner}/{repo}/rulesets/{id}`, not PATCH, and PATCH 404s.
 - **Local hooks are in `.githooks/`** (wired by the root `prepare` script):
   pre-commit blocks staged secrets/databases and Prettier-checks staged files;
   pre-push runs `check-types`. Neither builds — `next build` clobbers a running

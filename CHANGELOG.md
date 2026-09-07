@@ -9,6 +9,17 @@ at 0.x — minor bumps may still change behaviour.
 
 ### Fixed
 
+- Dependabot auto-merge had never once fired. GitHub enables
+  `require_extra_approval_for_unattributed_changes` by default on new _and
+  existing_ rulesets; it demands one approval more than configured for a
+  bot-authored pull request, which a single-maintainer repo cannot supply. A
+  redundant "restrict updates" rule also kept every actor but me from writing to
+  `main`, so Dependabot could not have merged even once approved. Both are gone;
+  the approval and status-check rules are otherwise untouched.
+- The auto-merge gate matched `version-update:semver-patch`, but
+  `fetch-metadata` reports the _highest_ bump in a grouped pull request, so every
+  grouped update read as `semver-minor` and was skipped. It now gates on the
+  dependency group instead.
 - `.dockerignore` patterns are not recursive, so a nested `.env.local` was
   copied into locally built images. Every pattern is now `**/`-anchored, and CI
   asserts that a built image contains no env files, databases, keys or `.git`.
@@ -18,6 +29,10 @@ at 0.x — minor bumps may still change behaviour.
 
 ### Changed
 
+- Dependabot's single `minor-and-patch` group is split in two, on whether semver
+  promises anything: `stable` (dependencies at 1.0 or above) auto-merges its
+  minors and patches, while `pre-1-0` (`@anthropic-ai/sdk`, `drizzle-orm`,
+  `drizzle-kit`, `node-ical`) stays manual.
 - `croner` 9 → 10 and `@hookform/resolvers` 3 → 5. Both majors, both verified
   against the way this repo actually uses them: croner's `(pattern, {name,
 protect}, fn)` constructor still fires and stops, and `zodResolver` still

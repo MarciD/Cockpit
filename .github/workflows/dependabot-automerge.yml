@@ -1,15 +1,23 @@
-# Auto-merge Dependabot's patch updates once CI is green. Nothing else.
+# Auto-merge Dependabot's `stable` group once CI is green. Nothing else.
 #
-# Why only patches: this repo has no test suite, so a green CI run says the app
-# compiles and boots, not that it still behaves. A zod 4 bump passed every check
-# and silently turned every widget settings field into a plain text input. And
-# several dependencies are 0.x, where semver allows a *minor* to break — the
-# drizzle-orm 0.38 -> 0.45 bump was exactly that. Minors and majors stay manual.
+# Why the group and not an update type: fetch-metadata reports the *highest*
+# bump in a grouped PR, so one 0.x minor riding along makes the whole PR read as
+# `semver-minor`. A patch-only gate therefore never fires on a grouped config —
+# it silently skipped every PR for a week. The safety lives in
+# .github/dependabot.yml instead: `stable` is minors and patches of
+# dependencies at 1.0 or above, where semver promises the change is additive.
+# The `pre-1-0` group and every major stay manual, because this repo has no test
+# suite — a green CI run says the app compiles and boots, not that it still
+# behaves. zod 4 passed every check and turned every widget settings field into
+# a plain text input.
 #
-# Dependabot does the merging (via the comment below), not this workflow: the
-# default branch requires a code-owner approval, which no bot can give, and
-# `dependabot[bot]` is the bypass actor on that rule. It still waits for the
-# required status checks, which nothing bypasses.
+# Dependabot does the merging, via the comment below, rather than this workflow
+# calling `gh pr merge`. That indirection is load-bearing: `main` requires a
+# code-owner approval that no bot can give, and `dependabot[bot]` is a bypass
+# actor on the ruleset carrying that requirement. It is deliberately *not* a
+# bypass actor on the ruleset carrying the required status checks, so those
+# still have to pass — a bypass exempts an actor from every rule in its own
+# ruleset, which is why the two are kept apart.
 name: Dependabot auto-merge
 
 on: pull_request
@@ -31,14 +39,32 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Ask Dependabot to merge patch updates
-        if: steps.meta.outputs.update-type == 'version-update:semver-patch'
+      # One place decides and says why, so a skipped PR explains itself in the
+      # log. The update-type check is redundant with the group's own
+      # `update-types` — it is here so widening the group in dependabot.yml
+      # can't quietly let a major merge itself.
+      - name: Decide
+        id: decide
+        env:
+          GROUP: ${{ steps.meta.outputs.dependency-group }}
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+          NAMES: ${{ steps.meta.outputs.dependency-names }}
+        run: |
+          case "$UPDATE_TYPE" in
+            version-update:semver-minor | version-update:semver-patch) additive=yes ;;
+            *) additive=no ;;
+          esac
+          if [ "$GROUP" = "stable" ] && [ "$additive" = yes ]; then
+            echo "merge=true" >> "$GITHUB_OUTPUT"
+            echo "$NAMES — stable group, $UPDATE_TYPE: merging once CI is green."
+          else
+            echo "merge=false" >> "$GITHUB_OUTPUT"
+            echo "$NAMES — group '${GROUP:-none}', $UPDATE_TYPE: leaving it for review."
+          fi
+
+      - name: Ask Dependabot to merge
+        if: steps.decide.outputs.merge == 'true'
         run: gh pr comment "$PR_URL" --body "@dependabot squash and merge"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Explain why anything larger is left alone
-        if: steps.meta.outputs.update-type != 'version-update:semver-patch'
-        run: |
-          echo "${{ steps.meta.outputs.dependency-names }} is a ${{ steps.meta.outputs.update-type }} update — leaving it for review."
