@@ -74,20 +74,22 @@ jobs:
             echo "$NAMES — group '${GROUP:-none}', $UPDATE_TYPE: leaving it for review."
           fi
 
-      # Requires "Allow GitHub Actions to create and approve pull requests".
-      # If that gets turned off, this step fails and nothing merges — the safe
-      # direction. A later Dependabot rebase dismisses this approval and
-      # re-triggers the workflow on `synchronize`, which approves again.
-      - name: Approve
+      - name: Wait for the required checks
         if: steps.decide.outputs.merge == 'true'
-        run: gh pr review "$PR_URL" --approve --body "Stable group, CI-gated. See .github/workflows/dependabot-automerge.yml."
+        run: gh pr checks "$PR_URL" --watch --required --fail-fast --interval 30
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Wait for the required checks
+      # Deliberately after the wait: an approval must never sit on a PR whose
+      # checks went red. Requires "Allow GitHub Actions to create and approve
+      # pull requests" — if that gets turned off this step fails and nothing
+      # merges, which is the safe direction. A later Dependabot rebase dismisses
+      # the approval and re-triggers the workflow on `synchronize`, which runs
+      # through again.
+      - name: Approve
         if: steps.decide.outputs.merge == 'true'
-        run: gh pr checks "$PR_URL" --watch --required --fail-fast --interval 30
+        run: gh pr review "$PR_URL" --approve --body "Stable group, CI-gated. See .github/workflows/dependabot-automerge.yml."
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
