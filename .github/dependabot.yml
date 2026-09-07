@@ -1,4 +1,14 @@
 version: 2
+
+# Dependabot applies a default 3-day cooldown to version updates even with no
+# `cooldown` key here (security updates are exempt). That is load-bearing for
+# auto-merge: anything that merges itself has been public for at least three
+# days, long enough for most yanked or immediately-broken releases to surface.
+#
+# It also means a fresh release is skipped rather than proposed, and the run log
+# is the only place that says so — "Found acceptable version outside cooldown:
+# <the version already in use>". A bump can look missing when it is only
+# waiting. Worth knowing before hunting for a broken group config.
 updates:
   - package-ecosystem: npm
     directory: /
