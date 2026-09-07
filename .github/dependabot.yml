@@ -86,6 +86,23 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    groups:
+      # Same policy as npm, and the same group name, so the auto-merge
+      # workflow's gate covers both ecosystems without a second condition.
+      # Every action here is 1.x or above, so there is no `pre-1-0`
+      # counterpart — but action majors do break: checkout 4 -> 7,
+      # pnpm/action-setup 4 -> 6 and build-push-action 6 -> 7 were all closed
+      # unmerged before being taken deliberately. Majors are never grouped, so
+      # they still arrive alone.
+      #
+      # These are pinned to a SHA with the version in a trailing comment, and
+      # Dependabot moves both together. Auto-merging means a new upstream SHA
+      # reaches CI without being read first — it is gated on CI passing while
+      # using that SHA, which is the only check that was ever going to catch a
+      # broken action anyway.
+      stable:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: docker
     directory: /

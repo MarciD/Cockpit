@@ -36,6 +36,11 @@ at 0.x — minor bumps may still change behaviour.
 
 ### Changed
 
+- GitHub Actions bumps follow the same policy as npm: a `stable` group
+  auto-merges action minors and patches, and majors still arrive alone. The
+  actions are SHA-pinned, so Dependabot moves the digest and the version comment
+  together. The Docker base image stays out of it — its tag floats on the Node
+  major, which has to move together with `.nvmrc` and `engines` by hand.
 - Dependabot's single `minor-and-patch` group is split in two, on whether semver
   promises anything: `stable` (dependencies at 1.0 or above) auto-merges its
   minors and patches, while `pre-1-0` (`@anthropic-ai/sdk`, `drizzle-orm`,

@@ -106,7 +106,9 @@ dependencies at 1.0 or above — which merges itself once CI is green. Below 1.0
 semver permits a breaking minor, and one has broken this repo (`drizzle-orm`
 0.38 → 0.45), so those arrive as a separate `pre-1-0` PR. That group and every
 major stay manual: a green CI run in a repo with no tests means "it compiles and
-boots", not "it still works".
+boots", not "it still works". Pinned GitHub Actions follow the same rule through
+a `stable` group of their own — their majors break often enough
+(`actions/checkout` 4 → 7) to stay manual too.
 
 The workflow supplies that approving review itself and then merges. Nothing is
 bypassed, which is the point: the required status checks live in the other

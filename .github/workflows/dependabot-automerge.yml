@@ -6,6 +6,8 @@
 # it silently skipped every PR it ever saw. The safety lives in
 # .github/dependabot.yml instead: `stable` is minors and patches of
 # dependencies at 1.0 or above, where semver promises the change is additive.
+# Both the npm and github-actions ecosystems define a group of that name, so
+# this one gate covers both.
 # The `pre-1-0` group and every major stay manual, because this repo has no test
 # suite — a green CI run says the app compiles and boots, not that it still
 # behaves. zod 4 passed every check and turned every widget settings field into
