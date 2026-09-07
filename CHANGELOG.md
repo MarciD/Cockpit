@@ -9,17 +9,24 @@ at 0.x — minor bumps may still change behaviour.
 
 ### Fixed
 
-- Dependabot auto-merge had never once fired. GitHub enables
-  `require_extra_approval_for_unattributed_changes` by default on new _and
-  existing_ rulesets; it demands one approval more than configured for a
-  bot-authored pull request, which a single-maintainer repo cannot supply. A
-  redundant "restrict updates" rule also kept every actor but me from writing to
-  `main`, so Dependabot could not have merged even once approved. Both are gone;
-  the approval and status-check rules are otherwise untouched.
-- The auto-merge gate matched `version-update:semver-patch`, but
-  `fetch-metadata` reports the _highest_ bump in a grouped pull request, so every
-  grouped update read as `semver-minor` and was skipped. It now gates on the
-  dependency group instead.
+- Dependabot auto-merge had never once fired, for four independent reasons.
+  GitHub enables `require_extra_approval_for_unattributed_changes` by default on
+  new _and existing_ rulesets; it demands one approval more than configured for
+  a bot-authored pull request, which a single-maintainer repo cannot supply. A
+  redundant "restrict updates" rule kept every actor but me from writing to
+  `main`. The gate matched `version-update:semver-patch`, but `fetch-metadata`
+  reports the _highest_ bump in a grouped pull request, so every grouped update
+  read as `semver-minor` and was skipped. And the merge itself was requested by
+  commenting `@dependabot squash and merge` — a command GitHub removed in
+  January 2026, which fails silently: no reply, no reaction, no error.
+- Auto-merge now works by approving rather than bypassing. The workflow gates on
+  the `stable` dependency group, submits its own approving review, waits for the
+  required checks, then merges. Nothing is waived, so the status-check ruleset
+  still gates the merge server-side. A bypass actor was tried first and is a
+  dead end: `gh pr merge --auto` ignores `bypass_actors` entirely, and GitHub
+  refuses the Actions app as a bypass actor on a user-owned repository.
+  `require_code_owner_review` is off as a result — an app cannot be a code
+  owner — and "Allow GitHub Actions to create and approve pull requests" is on.
 - `.dockerignore` patterns are not recursive, so a nested `.env.local` was
   copied into locally built images. Every pattern is now `**/`-anchored, and CI
   asserts that a built image contains no env files, databases, keys or `.git`.

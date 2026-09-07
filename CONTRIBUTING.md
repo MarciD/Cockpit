@@ -94,9 +94,9 @@ request:
 
 - **Protected main** — both CI jobs must pass, history stays linear, squash-only,
   no force pushes or deletions.
-- **Maintainer review** — one approving review from the code owner
-  ([CODEOWNERS](.github/CODEOWNERS)), stale reviews dismissed on a new push, and
-  review threads resolved before merge.
+- **Maintainer review** — one approving review, stale reviews dismissed on a new
+  push, and review threads resolved before merge.
+  [CODEOWNERS](.github/CODEOWNERS) auto-requests mine.
 
 There are no other collaborators, so contributions come from forks. I'm the only
 one who can approve.
@@ -108,9 +108,13 @@ semver permits a breaking minor, and one has broken this repo (`drizzle-orm`
 major stay manual: a green CI run in a repo with no tests means "it compiles and
 boots", not "it still works".
 
-Dependabot bypasses the review ruleset but not the status-check one, which is
-why the two are separate — a bypass actor is exempt from _every_ rule in its own
-ruleset, so folding them together would let a bot merge without CI.
+The workflow supplies that approving review itself and then merges. Nothing is
+bypassed, which is the point: the required status checks live in the other
+ruleset and still gate the merge server-side, rather than only because the job
+happens to wait for them. The two rulesets stay separate for the same reason a
+bypass would be risky — an actor exempted from one rule in a ruleset is exempt
+from _all_ of them, so folding the approval and the checks together would make
+any future exemption skip CI too.
 
 ## Commits and PRs
 

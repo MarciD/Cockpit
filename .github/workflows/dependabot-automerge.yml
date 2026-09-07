@@ -3,7 +3,7 @@
 # Why the group and not an update type: fetch-metadata reports the *highest*
 # bump in a grouped PR, so one 0.x minor riding along makes the whole PR read as
 # `semver-minor`. A patch-only gate therefore never fires on a grouped config —
-# it silently skipped every PR for a week. The safety lives in
+# it silently skipped every PR it ever saw. The safety lives in
 # .github/dependabot.yml instead: `stable` is minors and patches of
 # dependencies at 1.0 or above, where semver promises the change is additive.
 # The `pre-1-0` group and every major stay manual, because this repo has no test
@@ -11,13 +11,22 @@
 # behaves. zod 4 passed every check and turned every widget settings field into
 # a plain text input.
 #
-# Dependabot does the merging, via the comment below, rather than this workflow
-# calling `gh pr merge`. That indirection is load-bearing: `main` requires a
-# code-owner approval that no bot can give, and `dependabot[bot]` is a bypass
-# actor on the ruleset carrying that requirement. It is deliberately *not* a
-# bypass actor on the ruleset carrying the required status checks, so those
-# still have to pass — a bypass exempts an actor from every rule in its own
-# ruleset, which is why the two are kept apart.
+# Why this approves rather than bypasses. `main` requires one approving review.
+# Nothing here is exempt from that: Dependabot's own bypass can't be used (its
+# merge comment commands were removed in January 2026, so there is no way left
+# to ask it to merge), and GitHub refuses to make the Actions app a bypass actor
+# on a user-owned repo at all — "must be part of the ruleset source or owner
+# organization". So the workflow supplies a real approval and the merge then
+# satisfies every rule legitimately. Nothing is waived, which is the point: the
+# required status checks in the *other* ruleset still gate the merge
+# server-side, not merely because this job happens to wait for them.
+#
+# Why it waits and merges rather than `gh pr merge --auto`: enabling auto-merge
+# now refuses with a 422 when the PR's requirements are not already met, which
+# is precisely the moment this runs. Blocking on the checks is deterministic and
+# fails loudly. `--required` is load-bearing — this workflow is itself a check on
+# the PR, so without it the job would wait on itself forever. Never `--admin`:
+# that would bypass the status checks, the one thing that must never be skipped.
 name: Dependabot auto-merge
 
 on: pull_request
@@ -29,6 +38,9 @@ jobs:
   automerge:
     if: github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
+    # The docker job is the long pole at ~4 minutes. This is a ceiling for a
+    # wedged check, not an expected duration.
+    timeout-minutes: 30
     permissions:
       contents: write
       pull-requests: write
@@ -62,9 +74,27 @@ jobs:
             echo "$NAMES — group '${GROUP:-none}', $UPDATE_TYPE: leaving it for review."
           fi
 
-      - name: Ask Dependabot to merge
+      # Requires "Allow GitHub Actions to create and approve pull requests".
+      # If that gets turned off, this step fails and nothing merges — the safe
+      # direction. A later Dependabot rebase dismisses this approval and
+      # re-triggers the workflow on `synchronize`, which approves again.
+      - name: Approve
         if: steps.decide.outputs.merge == 'true'
-        run: gh pr comment "$PR_URL" --body "@dependabot squash and merge"
+        run: gh pr review "$PR_URL" --approve --body "Stable group, CI-gated. See .github/workflows/dependabot-automerge.yml."
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for the required checks
+        if: steps.decide.outputs.merge == 'true'
+        run: gh pr checks "$PR_URL" --watch --required --fail-fast --interval 30
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge
+        if: steps.decide.outputs.merge == 'true'
+        run: gh pr merge "$PR_URL" --squash --delete-branch
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

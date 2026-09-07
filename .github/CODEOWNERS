@@ -1,3 +1,7 @@
-# Every change needs the maintainer's review. Outside contributors work from a
-# fork; the default-branch ruleset requires a code-owner approval before merge.
+# Outside contributors work from a fork. This file is what auto-requests my
+# review on every pull request. The default-branch ruleset requires one
+# approving review, but deliberately not a *code-owner* one: the Dependabot
+# auto-merge workflow supplies its own approval, and a GitHub App cannot be a
+# code owner. There are no other collaborators, so a human approval is still
+# mine either way. See .github/workflows/dependabot-automerge.yml.
 * @MarciD
