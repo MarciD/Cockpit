@@ -37,8 +37,14 @@
       <string>3000</string>
       <key>PATH</key>
       <string>__PNPM_DIR__:/usr/local/bin:/usr/bin:/bin</string>
-      <!-- Required: the passphrase that encrypts data/credentials.enc.
-           Generate one with `openssl rand -base64 32`. -->
+      <!-- Required, unless you keep it out of this file: the passphrase that
+           encrypts data/credentials.enc. Generate one with
+           `openssl rand -base64 32`.
+
+           This plist then holds that passphrase in plaintext, so keep it
+           0600 — `sed >` writes 0644 under the default umask. Better still,
+           drop this key and use COCKPIT_KEYCHAIN=1 or apps/web/.env.local;
+           see ops/launchd/README.md. -->
       <key>COCKPIT_SECRET</key>
       <string>__COCKPIT_SECRET__</string>
       <!-- Optional extras:
