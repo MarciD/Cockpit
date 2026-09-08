@@ -83,6 +83,16 @@ protect}, fn)` constructor still fires and stops, and `zodResolver` still
   keep the secret out of the plist altogether: `COCKPIT_KEYCHAIN=1`, or
   `apps/web/.env.local`, which Next loads on its own because the agent runs
   `pnpm -C apps/web start`.
+- The SQLite database was created world-readable. SQLite uses the process
+  umask, so `data/cockpit.sqlite` and its `-wal`/`-shm` companions landed
+  0644 — and they hold no encryption: the `cache` table stores plaintext
+  integration payloads (merge request titles, Jira issue summaries, calendar
+  events) alongside todos, learning history and profile names. Any other
+  local user could read all of it. `credentials.enc` beside it was already
+  written 0600, so this was an inconsistency rather than a policy. The database
+  and its journal companions are now tightened to 0600 wherever it is opened —
+  best-effort, so a bind-mounted volume or a root-owned directory cannot stop
+  the server from booting.
 - Every dependency advisory on the default branch closed: `next` 15.5.24,
   `drizzle-orm` 0.45.2, `fast-xml-parser` 5.11.1, `sharp` 0.35.4, plus
   `postcss`, `uuid` and `esbuild` via pinned overrides where a parent held them
