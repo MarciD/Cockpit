@@ -163,6 +163,19 @@ contract + a worked example; `SECURITY.md` has the threat model.
   `gh api repos/{owner}/{repo}/rules/branches/main`; the per-ruleset view hides
   that rulesets aggregate to the most restrictive. Ruleset writes are
   `PUT /repos/{owner}/{repo}/rulesets/{id}` — PATCH 404s.
+- **croner's `catch` defaults to `false`**, and that default is fatal: croner
+  then awaits the job function unguarded, so anything a job throws becomes an
+  unhandled rejection and Node exits — silently, from the outside. Every
+  `new Cron` in `scheduler.ts` passes `catch: onJobError`, a function rather
+  than `true` so a broken job is visible instead of invisibly dead. Work started
+  outside croner (the boot warm-up) needs its own `.catch()`.
+- **`next start` renames its process to `next-server (v…)`**, so a
+  `pkill -f "next-server"` run in _any_ other repo on this machine kills
+  cockpit's production server. It arrives as SIGTERM, Next shuts down
+  gracefully and exits 0, so there is no crash, no stack trace and no log —
+  which makes it look like the app died on its own. Kill dev servers by port
+  (`lsof -ti:4000 | xargs -r kill`), not by name; the retitled process keeps no
+  path in its argv, so a name pattern cannot be scoped to one project.
 - **Local hooks are in `.githooks/`** (wired by the root `prepare` script):
   pre-commit blocks staged secrets/databases and Prettier-checks staged files;
   pre-push runs `check-types`. Neither builds — `next build` clobbers a running

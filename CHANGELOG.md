@@ -9,6 +9,15 @@ at 0.x — minor bumps may still change behaviour.
 
 ### Fixed
 
+- The scheduler could take the whole server down. croner's `catch` option
+  defaults to `false`, which makes it await the job function unguarded, so a
+  throw or a rejected promise inside a job became an unhandled rejection and
+  Node exited. Both jobs now pass a `catch` callback, and the boot warm-up —
+  which runs outside croner, so `catch` does not cover it — got its own guard. A
+  failing job logs and the next tick still runs. The refresh job survived only
+  because of its `Promise.allSettled`; the recurring-task job, a synchronous
+  SQLite write, had no such protection.
+
 - Dependabot auto-merge had never once fired, for four independent reasons.
   GitHub enables `require_extra_approval_for_unattributed_changes` by default on
   new _and existing_ rulesets; it demands one approval more than configured for
