@@ -76,6 +76,13 @@ protect}, fn)` constructor still fires and stops, and `zodResolver` still
 
 ### Security
 
+- The macOS LaunchAgent install left the passphrase to `data/credentials.enc`
+  in a world-readable file. The generated plist carries `COCKPIT_SECRET` in
+  plaintext, and redirecting `sed` output into it writes mode 0644 under the
+  default umask. The steps now `chmod 600` it, and document the two ways to
+  keep the secret out of the plist altogether: `COCKPIT_KEYCHAIN=1`, or
+  `apps/web/.env.local`, which Next loads on its own because the agent runs
+  `pnpm -C apps/web start`.
 - Every dependency advisory on the default branch closed: `next` 15.5.24,
   `drizzle-orm` 0.45.2, `fast-xml-parser` 5.11.1, `sharp` 0.35.4, plus
   `postcss`, `uuid` and `esbuild` via pinned overrides where a parent held them
