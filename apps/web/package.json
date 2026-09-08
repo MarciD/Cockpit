@@ -10,7 +10,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.122.0",
+    "@anthropic-ai/sdk": "^0.123.0",
     "@chakra-ui/react": "^3.37.0",
     "@cockpit/db": "workspace:*",
     "@cockpit/integrations": "workspace:*",
