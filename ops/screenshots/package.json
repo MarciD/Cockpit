@@ -1,0 +1,12 @@
+{
+  "name": "cockpit-screenshots",
+  "private": true,
+  "type": "module",
+  "description": "Widget screenshots for the per-widget READMEs. Not part of the pnpm workspace.",
+  "scripts": {
+    "capture": "node capture.mjs http://localhost:4100 screenshots out"
+  },
+  "dependencies": {
+    "playwright": "1.63.0"
+  }
+}

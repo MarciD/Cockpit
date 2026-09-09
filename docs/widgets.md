@@ -97,11 +97,12 @@ Rules:
 - Widget tables are queried with the query builder
   (`db.select().from(table)`), not `db.query.*`, because `createDb` registers
   only the core schema for the relational API.
-- Screenshots come from the Playwright MCP against `localhost:4000`, the widget
-  alone on a desk, at 2×. Retake them when the widget's look changes.
+- Screenshots come from `ops/screenshots` (Playwright against an isolated dev
+  server with scratch data, see its README), the widget alone on a desk, at 2×.
+  Retake them when the widget's look changes.
 
-**Status (2026-09-09):** this rule is new and none of the ten widgets has a
-README yet. Nine still keep server pieces in `packages/integrations`,
+**Status (2026-09-09):** every widget has a README with screenshots. Nine
+still keep server pieces in `packages/integrations`,
 `apps/web/lib/integration-cache.ts`, `apps/web/lib/credentials.ts`,
 `apps/web/lib/scheduler.ts` and `apps/web/app/api/*`; `language-learning` has
 its whole slice under `apps/web/lib/language-learning/` with 17 route files.

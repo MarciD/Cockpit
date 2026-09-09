@@ -210,6 +210,6 @@ contract + a worked example; `SECURITY.md` has the threat model.
 - `chat_messages` / `usage_events` / `suggestions` tables exist but the assistant
   doesn't persist history yet, and the usage→widget-suggestion loop isn't built.
 - Global settings / global API keys are deferred (creds are per-widget for now).
-- **Widget layout migration.** None of the ten widgets has a `README.md` +
-  `screenshots/` yet, and nine keep server code outside their folder (see the
-  one-folder rule above). READMEs first, moves when a widget is next touched.
+- **Widget layout migration.** All ten widgets have a `README.md` +
+  `screenshots/` (2026-09-09); nine still keep server code outside their
+  folder (see the one-folder rule above). Move one when it is next touched.
