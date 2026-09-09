@@ -5,6 +5,9 @@
  * @type {import("next").NextConfig}
  */
 const nextConfig = {
+  // Overridable so a dev/screenshot server can run next to the launchd
+  // `next start` instance without both writing into the same `.next`.
+  distDir: process.env.COCKPIT_DIST_DIR ?? ".next",
   reactStrictMode: true,
   // No ESLint config in this repo by design; CI runs Prettier + tsc + build.
   eslint: { ignoreDuringBuilds: true },
