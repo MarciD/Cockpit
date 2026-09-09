@@ -16,8 +16,18 @@ import {
 import { getCache, setCache } from "@cockpit/db";
 import { getDb } from "./db";
 import { getProviderConfig, listCalendars, type Provider } from "./credentials";
+import { notify } from "./notifications/composition";
 
 const TTL_MS = 5 * 60_000;
+const AUTH_FAILED_DEDUPE_MS = 24 * 60 * 60_000;
+
+const PROVIDER_LABELS: Partial<Record<Provider, string>> = {
+  gitlab: "GitLab",
+  jira: "Jira",
+  google: "Google",
+  calendar: "Calendars",
+  anthropic: "Claude",
+};
 
 export interface IntegrationPayload {
   configured: boolean;
@@ -62,9 +72,22 @@ async function throughCache<C>(
     return { configured: true, items, cachedAt: new Date().toISOString() };
   } catch (err) {
     // A rejected credential is flagged so the widget can offer a reconnect
-    // instead of an error the user has no way to act on.
+    // instead of an error the user has no way to act on — and raised once a
+    // day in the inbox, so it is noticed before the desk is opened.
     const auth =
       err instanceof IntegrationAuthError ? { authFailed: true } : {};
+    if (err instanceof IntegrationAuthError) {
+      void notify({
+        kind: "integration.auth-failed",
+        severity: "action",
+        title: `${PROVIDER_LABELS[provider] ?? provider} rejected the saved credential`,
+        body: `${err.message} Reconnect it in the widget's settings.`,
+        url: "/",
+        dedupeKey: `integration.auth-failed:${provider}`,
+        dedupeWindowMs: AUTH_FAILED_DEDUPE_MS,
+        data: { source: provider },
+      });
+    }
     if (cached) {
       return {
         configured: true,

@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, isNull, lt, sql } from "drizzle-orm";
 import type { CockpitDb } from "./index";
 import {
   cache,
@@ -6,6 +6,7 @@ import {
   layouts,
   learningScore,
   learningSessions,
+  notifications,
   profiles,
   recurringTasks,
   todos,
@@ -496,4 +497,103 @@ export function listLearningSessionsSince(
     )
     .orderBy(desc(learningSessions.at))
     .all();
+}
+
+// --- notifications ----------------------------------------------------------
+
+export type NotificationRow = typeof notifications.$inferSelect;
+
+export function insertNotification(
+  db: CockpitDb,
+  value: typeof notifications.$inferInsert,
+): NotificationRow {
+  return db.insert(notifications).values(value).returning().get();
+}
+
+/** The newest row carrying this dedupe key created after `since`, if any. */
+export function findNotificationByDedupeKey(
+  db: CockpitDb,
+  dedupeKey: string,
+  since: Date,
+): NotificationRow | undefined {
+  return db
+    .select()
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.dedupeKey, dedupeKey),
+        gt(notifications.createdAt, since),
+      ),
+    )
+    .orderBy(desc(notifications.createdAt))
+    .limit(1)
+    .get();
+}
+
+/** Newest first, dismissed rows excluded; `since` narrows to rows created after it. */
+export function listNotifications(
+  db: CockpitDb,
+  options: { since?: Date; unreadOnly?: boolean; limit?: number } = {},
+): NotificationRow[] {
+  const conditions = [isNull(notifications.dismissedAt)];
+  if (options.since)
+    conditions.push(gt(notifications.createdAt, options.since));
+  if (options.unreadOnly) conditions.push(isNull(notifications.readAt));
+  return db
+    .select()
+    .from(notifications)
+    .where(and(...conditions))
+    .orderBy(desc(notifications.createdAt))
+    .limit(options.limit ?? 50)
+    .all();
+}
+
+export function countUnreadNotifications(db: CockpitDb): number {
+  const row = db
+    .select({ n: sql<number>`count(*)` })
+    .from(notifications)
+    .where(and(isNull(notifications.readAt), isNull(notifications.dismissedAt)))
+    .get();
+  return row?.n ?? 0;
+}
+
+export function setNotificationRead(db: CockpitDb, id: string, read: boolean) {
+  db.update(notifications)
+    .set({ readAt: read ? new Date() : null })
+    .where(eq(notifications.id, id))
+    .run();
+}
+
+export function markAllNotificationsRead(db: CockpitDb): number {
+  return db
+    .update(notifications)
+    .set({ readAt: new Date() })
+    .where(and(isNull(notifications.readAt), isNull(notifications.dismissedAt)))
+    .returning({ id: notifications.id })
+    .all().length;
+}
+
+export function dismissNotification(db: CockpitDb, id: string) {
+  const now = new Date();
+  db.update(notifications)
+    .set({
+      dismissedAt: now,
+      readAt: sql`coalesce(${notifications.readAt}, ${Math.floor(now.getTime() / 1000)})`,
+    })
+    .where(eq(notifications.id, id))
+    .run();
+}
+
+/** Drop read or dismissed rows older than `before`. Returns the number removed. */
+export function pruneNotifications(db: CockpitDb, before: Date): number {
+  return db
+    .delete(notifications)
+    .where(
+      and(
+        lt(notifications.createdAt, before),
+        sql`(${notifications.readAt} is not null or ${notifications.dismissedAt} is not null)`,
+      ),
+    )
+    .returning({ id: notifications.id })
+    .all().length;
 }

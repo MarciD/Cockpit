@@ -106,6 +106,25 @@ The scheduler keeps integration caches warm every 5 minutes and runs one cron
 job per enabled recurring task. It has **no cross-process lock**: run exactly one
 instance, or every process will run every job against the same SQLite file.
 
+## Notifications
+
+One server-side entry point, `notify()` in `apps/web/lib/notifications`, and
+one table. The row is the inbox entry and the source of truth; delivery
+channels (a phone push, a desktop banner) fan out from it and may fail without
+losing it. `notify()` never throws — its callers are scheduled jobs and cache
+refreshes that must not die over a notification — and it collapses rows that
+share a `dedupeKey` inside a window, so a flapping job or a rejected token is
+reported once, not every five minutes.
+
+Producers live where the knowledge is: a recurring task firing in the
+scheduler, an `IntegrationAuthError` in `throughCache`, croner's `catch`
+callback. The browser learns about new rows by polling `GET /api/notifications`
+every 30 seconds from the bell in the rail (one shared TanStack query); rows
+newer than the last poll become toasts, the unread count goes onto the
+installed app's badge, and the inbox opens as the ordinary modal in a portal.
+No SSE and no web push: the inbox has to be persisted anyway, and polling an
+inbox is the whole cost.
+
 ## The signal bus
 
 `@cockpit/widget-sdk/signals` is a client-only, desk-scoped pub/sub over

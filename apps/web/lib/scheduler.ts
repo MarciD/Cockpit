@@ -6,12 +6,17 @@ import {
   getGitlabData,
   getJiraData,
 } from "./integration-cache";
+import { notificationServices, notify } from "./notifications/composition";
 
 interface SchedulerState {
   started: boolean;
   refreshJob: Cron | null;
+  pruneJob: Cron | null;
   taskJobs: Map<string, Cron>;
 }
+
+/** A failing job notifies at most once an hour, so a flapping job cannot flood the inbox. */
+const JOB_FAILURE_DEDUPE_MS = 60 * 60_000;
 
 // One scheduler shared across route bundles + instrumentation.
 const globalForScheduler = globalThis as unknown as {
@@ -20,6 +25,7 @@ const globalForScheduler = globalThis as unknown as {
 const state: SchedulerState = (globalForScheduler.cockpitScheduler ??= {
   started: false,
   refreshJob: null,
+  pruneJob: null,
   taskJobs: new Map(),
 });
 
@@ -45,8 +51,19 @@ function reportJobFailure(name: string, err: unknown): void {
   process.stderr.write(`[cockpit] scheduled job ${name} failed: ${detail}\n`);
 }
 
-const onJobError: CatchCallbackFn = (err, job) =>
-  reportJobFailure(job.name ?? "unnamed", err);
+const onJobError: CatchCallbackFn = (err, job) => {
+  const name = job.name ?? "unnamed";
+  reportJobFailure(name, err);
+  // notify() never throws, so this cannot re-enter the failure path.
+  void notify({
+    kind: "scheduler.job-failed",
+    severity: "action",
+    title: `Scheduled job ${name} failed`,
+    body: err instanceof Error ? err.message : String(err),
+    dedupeKey: `scheduler.job-failed:${name}`,
+    dedupeWindowMs: JOB_FAILURE_DEDUPE_MS,
+  });
+};
 
 /** (Re)register a croner job per enabled recurring task; refresh next-run. */
 export function reloadRecurringTasks(): void {
@@ -59,9 +76,19 @@ export function reloadRecurringTasks(): void {
       const job = new Cron(
         task.cron,
         { name: `task:${task.id}`, protect: true, catch: onJobError },
-        () => {
+        async () => {
           const next = state.taskJobs.get(task.id)?.nextRun() ?? null;
           updateRecurringTask(getDb(), task.id, { nextRunAt: next });
+          // The task firing is the notification; the row deep-links to its desk.
+          await notify({
+            kind: "tasks.due",
+            severity: "action",
+            profileId: task.profileId,
+            title: task.title,
+            body: `Recurring task · ${task.cron}`,
+            url: `/${task.profileId}`,
+            data: { source: "recurring", taskId: task.id },
+          });
         },
       );
       state.taskJobs.set(task.id, job);
@@ -86,6 +113,15 @@ export function startScheduler(): void {
   );
   // Outside croner, so the `catch` above does not cover it.
   void refreshAll().catch((err) => reportJobFailure("refresh (warm-up)", err));
+
+  // Keep the inbox bounded: read or dismissed rows older than 30 days go.
+  state.pruneJob = new Cron(
+    "0 4 * * *",
+    { name: "notifications:prune", protect: true, catch: onJobError },
+    () => {
+      notificationServices().inbox.prune();
+    },
+  );
 
   reloadRecurringTasks();
   process.stdout.write("[cockpit] scheduler started\n");

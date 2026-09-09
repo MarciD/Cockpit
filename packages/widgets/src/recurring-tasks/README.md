@@ -11,9 +11,10 @@ shows you when it fires next.
 - Rows show an enable/disable checkbox, the title (faint when disabled), the
   cron expression and `next Wed 09:00`.
 - The add row takes a title and a cron expression (default `0 9 * * 1`).
-- Firing a task currently only advances its `next run` timestamp. Making it
-  notify you is the first producer of the notification core (see the plan in
-  the project memory); until then this widget is a schedule, not an alarm.
+- When a task fires, the scheduler advances its `next run` and raises a
+  `tasks.due` notification (severity `action`) that deep-links to the desk. It
+  shows up in the bell, toasts in an open tab, and reaches the phone once the
+  phase-1 channels exist.
 
 ## Settings
 
@@ -28,11 +29,16 @@ None.
 | Table  | `recurring_tasks` (`id, profile_id, title, cron, next_run_at, enabled`)                                                                                                                   |
 | Jobs   | `reloadRecurringTasks()` in `apps/web/lib/scheduler.ts` re-registers every enabled task as `new Cron(cron, { name: "task:<id>", protect: true, catch: onJobError }, …)` after each change |
 
+## Notifications it raises
+
+`tasks.due` — one per firing, titled with the task, body `Recurring task ·
+<cron>`, linking to `/<desk>`. Produced in `apps/web/lib/scheduler.ts`.
+
 ## Assistant
 
 - Header badge: number of tasks.
 - Desk context: `2 active recurring tasks (of 3).`
-- Tool `get_recurring_tasks`.
+- Tools `get_recurring_tasks` and, for what has fired, `get_notifications`.
 
 ## Layout
 
@@ -55,5 +61,6 @@ only the generic hook.
 
 - The API accepts any cron string; an invalid one is silently skipped by the
   scheduler and keeps its previous `next run`.
+- A task that fires while the server is down is not caught up on restart.
 - Cron runs in the server's `TZ` (Europe/Berlin on the launchd install).
 - One server process only: there is no cross-process lock.

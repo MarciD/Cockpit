@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  index,
   integer,
   primaryKey,
   sqliteTable,
@@ -222,3 +223,34 @@ export const learningSessions = sqliteTable("learning_sessions", {
   correct: integer("correct").notNull().default(0),
   mode: text("mode").notNull(), // 'words' | 'verbs' | 'level' | 'general'
 });
+
+/**
+ * App-wide notifications. The row is the inbox entry and the source of truth;
+ * delivery channels (desktop, phone) fan out from it. `profile_id` is null for
+ * app-level events (a job failed, a credential was rejected).
+ */
+export const notifications = sqliteTable(
+  "notifications",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id").references(() => profiles.id, {
+      onDelete: "cascade",
+    }),
+    kind: text("kind").notNull(), // namespaced, e.g. 'tasks.due', 'integration.auth-failed'
+    severity: text("severity").notNull().default("info"), // 'info' | 'action' | 'urgent'
+    title: text("title").notNull(),
+    body: text("body"),
+    url: text("url"), // same-origin deep link
+    dataJson: text("data_json", { mode: "json" }),
+    dedupeKey: text("dedupe_key"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(now),
+    readAt: integer("read_at", { mode: "timestamp" }),
+    dismissedAt: integer("dismissed_at", { mode: "timestamp" }),
+  },
+  (t) => [
+    index("notifications_dedupe_idx").on(t.dedupeKey),
+    index("notifications_created_idx").on(t.createdAt),
+  ],
+);

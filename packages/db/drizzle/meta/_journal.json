@@ -50,6 +50,13 @@
       "when": 1788188112658,
       "tag": "0006_fuzzy_jocasta",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1788986314358,
+      "tag": "0007_flaky_starhawk",
+      "breakpoints": true
     }
   ]
 }

@@ -12,6 +12,7 @@ import {
   getJiraData,
   getWeatherData,
 } from "@/lib/integration-cache";
+import { notificationServices } from "@/lib/notifications/composition";
 
 export const runtime = "nodejs";
 
@@ -117,6 +118,24 @@ function buildTools(profileId: string) {
       description: "The current desk's recurring (scheduled) tasks.",
       inputSchema: EMPTY_SCHEMA,
       run: async () => JSON.stringify(listRecurringTasks(getDb(), profileId)),
+    }),
+    betaTool({
+      name: "get_notifications",
+      description:
+        "Unread notifications in the user's inbox, newest first: recurring tasks that fired, rejected credentials, failed scheduled jobs, test messages. Each has kind, severity, title, body, createdAt.",
+      inputSchema: EMPTY_SCHEMA,
+      run: async () =>
+        JSON.stringify(
+          notificationServices()
+            .inbox.list({ unreadOnly: true, limit: 20 })
+            .map((n) => ({
+              kind: n.kind,
+              severity: n.severity,
+              title: n.title,
+              body: n.body,
+              createdAt: n.createdAt.toISOString(),
+            })),
+        ),
     }),
     betaTool({
       name: "check_branch_merged",
