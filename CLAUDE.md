@@ -15,16 +15,26 @@ contract + a worked example; `SECURITY.md` has the threat model.
 - **No automated tests** — personal project (explicit user decision). Verify by
   `pnpm check-types`, `pnpm build`, and driving the app (Playwright MCP against
   `localhost:4000`). Don't add a test framework unless asked.
-- **Match existing patterns.** New widget → copy an existing one. New integration
-  → mirror an existing adapter + `/api/*` route + `integration-cache` helper.
-  **Domain-rich widget** (owns its data model + rules + LLM) → copy the
-  `language-learning` slice: pure `domain/` → `application/` → `infrastructure/`
-  → `composition.ts` under `apps/web/lib/<ctx>/` (server-only by convention),
-  thin `/api/<ctx>/*` routes, and presentation-only `packages/widgets/src/<ctx>/`
-  (full page exported via a package subpath). Dependency rule enforced by
-  structure + TS + `.../ARCHITECTURE.md`, not ESLint. LLM access = the shared
-  `anthropic` API key via `getProviderConfig` (never the Claude subscription —
-  Anthropic disallows programmatic subscription use).
+- **One folder per widget (firm rule, 2026-09-09).** Everything a widget owns
+  lives in `packages/widgets/src/<widget>/`: `README.md` (what it does, how it
+  looks, its settings, routes, tables, jobs, notifications) with
+  `screenshots/`, `index.tsx` (tile), `config.ts`, `types.ts`, `ui/`, `page/`,
+  and — when it has server logic — `server/` (`import "server-only"`;
+  `schema.ts`, pure `domain/` → `application/` → `infrastructure/` →
+  `composition.ts`, `routes.ts`, `jobs.ts`). Widget-specific adapters live in
+  the widget; `packages/integrations` keeps only shared pieces. `apps/web`
+  holds generic glue and cross-cutting services (notifications, images,
+  credentials, integration cache, scheduler). Layout, rules and migration
+  status: `docs/widgets.md#where-a-widget-lives`. **Existing widgets predate
+  the rule** — their server pieces are still spread over
+  `packages/integrations`, `apps/web/lib` and `apps/web/app/api/*`
+  (`language-learning` has the whole slice under `apps/web/lib`). Port one when
+  you next touch it; never add a new widget in the old shape. The generic glue
+  (server registry, `/api/w/[widget]` route, scheduler hook, drizzle-kit glob)
+  does not exist yet and lands with the first server-side widget built under
+  the rule. LLM access = the shared `anthropic` API key via
+  `getProviderConfig` (never the Claude subscription — Anthropic disallows
+  programmatic subscription use).
 - Keep the Atelier look: tokens/`layerStyles` in `apps/web/lib/theme.ts`
   (`tile`/`raised`/`inset`, `accent`, `status.*`); never hardcode hex — use tokens.
 
@@ -200,3 +210,6 @@ contract + a worked example; `SECURITY.md` has the threat model.
 - `chat_messages` / `usage_events` / `suggestions` tables exist but the assistant
   doesn't persist history yet, and the usage→widget-suggestion loop isn't built.
 - Global settings / global API keys are deferred (creds are per-widget for now).
+- **Widget layout migration.** None of the ten widgets has a `README.md` +
+  `screenshots/` yet, and nine keep server code outside their folder (see the
+  one-folder rule above). READMEs first, moves when a widget is next touched.

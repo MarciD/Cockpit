@@ -60,6 +60,60 @@ be added over time, so destructure what you need rather than positionally.
 
 ---
 
+## Where a widget lives
+
+**One folder per widget.** `packages/widgets/src/<widget>/` holds everything
+the widget owns — client, server and tables. Outside that folder a widget is
+one line in `registry.ts` (and, once it has server code, one line in the
+server registry) plus generic glue that is never written per widget.
+
+```
+packages/widgets/src/<widget>/
+  README.md        what it does, screenshots, settings, routes, tables, jobs,
+                   notifications it raises — kept current with the code
+  screenshots/     tile.png, page.png, settings.png (2×, PNG, ≤ 300 KB each)
+  index.tsx        defineWidget() — the tile (client)
+  config.ts        the zod configSchema + defaultConfig, framework-free
+  types.ts         DTOs shared by tile, page and server (types only)
+  ui/  page/       client components; a full page on its own package subpath
+  server/          only when the widget has server logic
+    index.ts       starts with `import "server-only"`
+    schema.ts      Drizzle tables — imports drizzle-orm/sqlite-core only
+    domain/ application/ infrastructure/ composition.ts
+    routes.ts      request handlers, mounted by the generic /api/w/[widget] route
+    jobs.ts        cron jobs, registered by the scheduler with `catch: onJobError`
+```
+
+Rules:
+
+- A provider adapter that only this widget uses lives in
+  `server/infrastructure/`. `packages/integrations` keeps shared pieces only:
+  `net.ts`, `errors.ts`, the credential store.
+- Cross-cutting services stay in `apps/web/lib`: notifications, images,
+  credentials, the integration cache, the scheduler. Widgets call them from
+  their server code.
+- Client code never imports `server/`; `server-only` turns that into a build
+  error. `registry.ts` must not import a widget's `server/` either.
+- Widget tables are queried with the query builder
+  (`db.select().from(table)`), not `db.query.*`, because `createDb` registers
+  only the core schema for the relational API.
+- Screenshots come from the Playwright MCP against `localhost:4000`, the widget
+  alone on a desk, at 2×. Retake them when the widget's look changes.
+
+**Status (2026-09-09):** this rule is new and none of the ten widgets has a
+README yet. Nine still keep server pieces in `packages/integrations`,
+`apps/web/lib/integration-cache.ts`, `apps/web/lib/credentials.ts`,
+`apps/web/lib/scheduler.ts` and `apps/web/app/api/*`; `language-learning` has
+its whole slice under `apps/web/lib/language-learning/` with 17 route files.
+The generic glue (server registry, `/api/w/[widget]` route, `/w/[widget]`
+page, scheduler hook, drizzle-kit schema glob) does not exist yet and lands
+with the first widget built in this shape. Until then: a new widget without
+server code already follows the folder + README rule; a widget with server code
+is built in this shape and brings the glue with it; an existing widget is
+ported when next touched. Never add to the old shape.
+
+---
+
 ## Stage 1 — a widget with no server code
 
 The smallest useful widget: config in, markup out. Modelled on
@@ -366,10 +420,13 @@ Write it as one sentence of plain fact — "3 MRs waiting on your review, oldest
 ## When a widget outgrows this
 
 If it owns a data model, rules of its own, and LLM or database access, keep the
-widget package presentation-only and put the domain in a layered slice under
-`apps/web/lib/<context>/`. See
-[architecture.md](architecture.md#domain-rich-widgets) and the worked example in
-[`language-learning/ARCHITECTURE.md`](../packages/widgets/src/language-learning/ARCHITECTURE.md).
+layering — pure `domain/` → `application/` → `infrastructure/` →
+`composition.ts` — inside the widget's own `server/` folder (see
+[Where a widget lives](#where-a-widget-lives)). `language-learning` shows the
+layering in
+[`ARCHITECTURE.md`](../packages/widgets/src/language-learning/ARCHITECTURE.md);
+its slice still sits under `apps/web/lib/language-learning/` until it is
+ported. See also [architecture.md](architecture.md#domain-rich-widgets).
 
 ## Known gap
 
@@ -377,7 +434,8 @@ Widget config is validated against `configSchema` in the browser but only
 structurally on the server (shape, size, nesting — see
 [`widget-config.ts`](../apps/web/lib/widget-config.ts)), because most widget
 modules are `"use client"` and a route handler importing the registry would get
-client references instead of real schemas. Moving each schema into a
-framework-free `config.ts` sibling, exported on its own package subpath, would
-let the server validate properly. Until then, validate anything that reaches a
-server-side fetch at the point it is consumed.
+client references instead of real schemas. The framework-free `config.ts` in
+the widget folder (see [Where a widget lives](#where-a-widget-lives)) is the
+schema's home for exactly this reason; wiring the server to validate against it
+is still open. Until then, validate anything that reaches a server-side fetch at
+the point it is consumed.

@@ -160,28 +160,39 @@ Overrides that must beat Chakra's cascade layers or un-layered vendor CSS live i
 ## Domain-rich widgets
 
 Most widgets are thin: fetch JSON, render it. When a widget owns a real domain —
-its own data model, rules, and LLM or database access — the widget package stays
-presentation-only and the domain goes server-side as a layered slice:
+its own data model, rules, and LLM or database access — the domain goes into the
+widget's own `server/` folder as a layered slice. A widget is one folder:
 
 ```
-apps/web/lib/<context>/
-  domain/          pure — no framework, no db, no LLM imports
-  application/     use cases over ports
-  infrastructure/  adapters: Drizzle repositories, LLM clients, CSV
-  composition.ts   wires adapters to services
-apps/web/app/api/<context>/*/route.ts    thin handlers
-packages/widgets/src/<context>/          the tile + any full page
+packages/widgets/src/<widget>/
+  README.md  screenshots/                what it is and what it looks like
+  index.tsx  config.ts  types.ts  ui/  page/   the client half
+  server/                                     the server half
+    index.ts       import "server-only"
+    schema.ts      its Drizzle tables
+    domain/        pure — no framework, no db, no LLM imports
+    application/   use cases over ports
+    infrastructure/ adapters: Drizzle repositories, LLM clients, provider APIs
+    composition.ts wires adapters to services
+    routes.ts      handlers, mounted by the generic /api/w/[widget] route
+    jobs.ts        cron jobs, registered by the scheduler
 ```
 
 Dependencies point one way only: `domain → nothing`, `application → domain`,
-`infrastructure → domain`, `routes and UI → everything below`. Nothing enforces
-that automatically — there is no ESLint in this repo — so it holds by structure,
-TypeScript, and review.
+`infrastructure → domain`, `routes and UI → everything below`. The client half
+never imports `server/`; `server-only` makes that a build error. The rest holds
+by structure, TypeScript, and review — there is no ESLint in this repo.
 
 The HTTP boundary is what keeps the client widget and the server domain apart: a
 full page is exported from the widget package on its own subpath and rendered by
-a thin `app/.../page.tsx`. `language-learning` is the worked example; see
-[its ARCHITECTURE.md](../packages/widgets/src/language-learning/ARCHITECTURE.md).
+a thin page route. Cross-cutting services (notifications, images, credentials,
+the integration cache, the scheduler) stay in `apps/web/lib`; widget-specific
+provider adapters live in the widget. `language-learning` shows the layering
+(see [its ARCHITECTURE.md](../packages/widgets/src/language-learning/ARCHITECTURE.md))
+but predates the one-folder rule: its slice still sits under
+`apps/web/lib/language-learning/` with 17 route files until it is ported. The
+rule, the layout and the migration status are in
+[widgets.md](widgets.md#where-a-widget-lives).
 
 ## Deliberate omissions
 
