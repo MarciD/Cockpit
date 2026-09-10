@@ -43,14 +43,10 @@ import {
   type VocabItem,
 } from "../types";
 
-export interface LanguageLearningPageProps {
-  profileId: string;
-  language: string;
-  native: string;
-  focusNote?: string;
-  /** Href back to the originating desk. */
-  backHref: string;
-}
+import type { WidgetPageProps } from "../../pages";
+
+/** `/w/language-learning?profile=<desk>&language=Spanish&native=German[&focus=…]` */
+export type LanguageLearningPageProps = WidgetPageProps;
 
 const JSON_HEADERS = { "content-type": "application/json" };
 const TABS = ["Sessions", "Practice", "Browse", "Verbs", "Stats"] as const;
@@ -70,7 +66,10 @@ const Select = chakra("select", {
 });
 
 export function LanguageLearningPage(props: LanguageLearningPageProps) {
-  const { profileId, language, native } = props;
+  const { profileId, params, backHref } = props;
+  const language = params.language ?? "";
+  const native = params.native || "German";
+  const focusNote = params.focus;
   const [tab, setTab] = useState<Tab>("Sessions");
   const [score, setScore] = useState<ScoreSummary | null>(null);
   const [items, setItems] = useState<VocabItem[]>([]);
@@ -85,12 +84,14 @@ export function LanguageLearningPage(props: LanguageLearningPageProps) {
   );
 
   const refreshScore = useCallback(async () => {
-    const res = await fetch(`/api/learn/score?${q}&today=${localToday()}`);
+    const res = await fetch(
+      `/api/w/language-learning/score?${q}&today=${localToday()}`,
+    );
     if (res.ok) setScore((await res.json()) as ScoreSummary);
   }, [q]);
 
   const refreshItems = useCallback(async () => {
-    const res = await fetch(`/api/learn/items?${q}`);
+    const res = await fetch(`/api/w/language-learning/items?${q}`);
     if (res.ok) setItems(((await res.json()) as { items: VocabItem[] }).items);
   }, [q]);
 
@@ -106,7 +107,7 @@ export function LanguageLearningPage(props: LanguageLearningPageProps) {
           {language}
         </Heading>
         <Link
-          href={props.backHref}
+          href={backHref}
           color="link"
           textStyle="label"
           _hover={{ color: "link.hover" }}
@@ -152,7 +153,7 @@ export function LanguageLearningPage(props: LanguageLearningPageProps) {
             profileId={profileId}
             language={language}
             native={native}
-            focusNote={props.focusNote}
+            focusNote={focusNote}
             items={items}
             onProgress={() => {
               void refreshScore();
@@ -189,7 +190,7 @@ export function LanguageLearningPage(props: LanguageLearningPageProps) {
             profileId={profileId}
             language={language}
             native={native}
-            focusNote={props.focusNote}
+            focusNote={focusNote}
             items={items}
             onProgress={() => {
               void refreshScore();
@@ -234,7 +235,7 @@ function SessionsPanel(props: {
   );
 
   useEffect(() => {
-    void fetch("/api/learn/session/topics").then(async (r) => {
+    void fetch("/api/w/language-learning/session/topics").then(async (r) => {
       if (r.ok) setTopics(((await r.json()) as { topics: Topic[] }).topics);
     });
   }, []);
@@ -247,7 +248,7 @@ function SessionsPanel(props: {
     setStarting(topic);
     setError(null);
     try {
-      const res = await fetch("/api/learn/session/topic", {
+      const res = await fetch("/api/w/language-learning/session/topic", {
         method: "POST",
         headers: JSON_HEADERS,
         body: JSON.stringify({
@@ -276,7 +277,7 @@ function SessionsPanel(props: {
     setStarting("__sentences__");
     setError(null);
     try {
-      const res = await fetch("/api/learn/session/sentences", {
+      const res = await fetch("/api/w/language-learning/session/sentences", {
         method: "POST",
         headers: JSON_HEADERS,
         body: JSON.stringify({
@@ -412,7 +413,7 @@ function PracticePanel(props: {
 
   const start = useCallback(async () => {
     const res = await fetch(
-      `/api/learn/next?${props.q}&mode=${mode}&count=${SESSION_SIZE}`,
+      `/api/w/language-learning/next?${props.q}&mode=${mode}&count=${SESSION_SIZE}`,
     );
     if (!res.ok) return;
     const json = (await res.json()) as { exercises: Exercise[] };
@@ -424,7 +425,7 @@ function PracticePanel(props: {
     async (correct: boolean) => {
       const ex = batch?.[index];
       if (!ex) return;
-      const res = await fetch("/api/learn/answer", {
+      const res = await fetch("/api/w/language-learning/answer", {
         method: "POST",
         headers: JSON_HEADERS,
         body: JSON.stringify({
@@ -451,7 +452,7 @@ function PracticePanel(props: {
 
   const requestHint = useCallback(
     async (itemId: string): Promise<Hint> => {
-      const res = await fetch("/api/learn/hint", {
+      const res = await fetch("/api/w/language-learning/hint", {
         method: "POST",
         headers: JSON_HEADERS,
         body: JSON.stringify({
@@ -578,7 +579,7 @@ function SentenceCoach(props: {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/learn/grade", {
+      const res = await fetch("/api/w/language-learning/grade", {
         method: "POST",
         headers: JSON_HEADERS,
         body: JSON.stringify({
@@ -697,7 +698,7 @@ function BrowsePanel(props: {
 
   const add = async () => {
     if (!term.trim() || !translation.trim()) return;
-    await fetch("/api/learn/items", {
+    await fetch("/api/w/language-learning/items", {
       method: "POST",
       headers: JSON_HEADERS,
       body: JSON.stringify({
@@ -714,7 +715,7 @@ function BrowsePanel(props: {
   };
 
   const remove = async (id: string) => {
-    await fetch(`/api/learn/items/${id}`, { method: "DELETE" });
+    await fetch(`/api/w/language-learning/items/${id}`, { method: "DELETE" });
     await props.onChange();
   };
 
@@ -842,7 +843,7 @@ function StatsPanel(props: {
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch("/api/learn/import", {
+      const res = await fetch("/api/w/language-learning/import", {
         method: "POST",
         headers: JSON_HEADERS,
         body: JSON.stringify({
@@ -899,7 +900,7 @@ function StatsPanel(props: {
             Import
           </Button>
           <Link
-            href={`/api/learn/export?${props.q}&native=${encodeURIComponent(props.native)}`}
+            href={`/api/w/language-learning/export?${props.q}&native=${encodeURIComponent(props.native)}`}
             color="link"
             fontSize="sm"
             _hover={{ color: "link.hover" }}

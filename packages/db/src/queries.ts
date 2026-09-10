@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, isNull, lt, lte, sql } from "drizzle-orm";
 import type { CockpitDb } from "./index";
 import {
   cache,
@@ -6,7 +6,12 @@ import {
   layouts,
   learningScore,
   learningSessions,
+  notificationDeliveries,
+  notificationPreferences,
+  notificationSettings,
+  notifications,
   profiles,
+  scheduledNotifications,
   recurringTasks,
   todos,
   usageEvents,
@@ -496,4 +501,251 @@ export function listLearningSessionsSince(
     )
     .orderBy(desc(learningSessions.at))
     .all();
+}
+
+// --- notifications ----------------------------------------------------------
+
+export type NotificationRow = typeof notifications.$inferSelect;
+
+export function insertNotification(
+  db: CockpitDb,
+  value: typeof notifications.$inferInsert,
+): NotificationRow {
+  return db.insert(notifications).values(value).returning().get();
+}
+
+/** The newest row carrying this dedupe key created after `since`, if any. */
+export function findNotificationByDedupeKey(
+  db: CockpitDb,
+  dedupeKey: string,
+  since: Date,
+): NotificationRow | undefined {
+  return db
+    .select()
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.dedupeKey, dedupeKey),
+        gt(notifications.createdAt, since),
+      ),
+    )
+    .orderBy(desc(notifications.createdAt))
+    .limit(1)
+    .get();
+}
+
+/** Newest first, dismissed rows excluded; `since` narrows to rows created after it. */
+export function listNotifications(
+  db: CockpitDb,
+  options: { since?: Date; unreadOnly?: boolean; limit?: number } = {},
+): NotificationRow[] {
+  const conditions = [isNull(notifications.dismissedAt)];
+  if (options.since)
+    conditions.push(gt(notifications.createdAt, options.since));
+  if (options.unreadOnly) conditions.push(isNull(notifications.readAt));
+  return db
+    .select()
+    .from(notifications)
+    .where(and(...conditions))
+    .orderBy(desc(notifications.createdAt))
+    .limit(options.limit ?? 50)
+    .all();
+}
+
+export function countUnreadNotifications(db: CockpitDb): number {
+  const row = db
+    .select({ n: sql<number>`count(*)` })
+    .from(notifications)
+    .where(and(isNull(notifications.readAt), isNull(notifications.dismissedAt)))
+    .get();
+  return row?.n ?? 0;
+}
+
+export function setNotificationRead(db: CockpitDb, id: string, read: boolean) {
+  db.update(notifications)
+    .set({ readAt: read ? new Date() : null })
+    .where(eq(notifications.id, id))
+    .run();
+}
+
+export function markAllNotificationsRead(db: CockpitDb): number {
+  return db
+    .update(notifications)
+    .set({ readAt: new Date() })
+    .where(and(isNull(notifications.readAt), isNull(notifications.dismissedAt)))
+    .returning({ id: notifications.id })
+    .all().length;
+}
+
+export function dismissNotification(db: CockpitDb, id: string) {
+  const now = new Date();
+  db.update(notifications)
+    .set({
+      dismissedAt: now,
+      readAt: sql`coalesce(${notifications.readAt}, ${Math.floor(now.getTime() / 1000)})`,
+    })
+    .where(eq(notifications.id, id))
+    .run();
+}
+
+/** Drop read or dismissed rows older than `before`. Returns the number removed. */
+export function pruneNotifications(db: CockpitDb, before: Date): number {
+  return db
+    .delete(notifications)
+    .where(
+      and(
+        lt(notifications.createdAt, before),
+        sql`(${notifications.readAt} is not null or ${notifications.dismissedAt} is not null)`,
+      ),
+    )
+    .returning({ id: notifications.id })
+    .all().length;
+}
+
+// --- notification preferences, settings, deliveries, reminders -------------
+
+export function listNotificationPreferences(db: CockpitDb) {
+  return db.select().from(notificationPreferences).all();
+}
+
+export function upsertNotificationPreference(
+  db: CockpitDb,
+  kind: string,
+  channels: string[],
+) {
+  const updatedAt = new Date();
+  db.insert(notificationPreferences)
+    .values({ kind, channelsJson: channels, updatedAt })
+    .onConflictDoUpdate({
+      target: notificationPreferences.kind,
+      set: { channelsJson: channels, updatedAt },
+    })
+    .run();
+}
+
+export function deleteNotificationPreference(db: CockpitDb, kind: string) {
+  db.delete(notificationPreferences)
+    .where(eq(notificationPreferences.kind, kind))
+    .run();
+}
+
+const SETTINGS_ROW_ID = "default";
+
+export function getNotificationSettings(db: CockpitDb) {
+  return db
+    .select()
+    .from(notificationSettings)
+    .where(eq(notificationSettings.id, SETTINGS_ROW_ID))
+    .get();
+}
+
+export function upsertNotificationSettings(
+  db: CockpitDb,
+  value: {
+    quietFrom: string | null;
+    quietTo: string | null;
+    publicUrl: string | null;
+  },
+) {
+  const updatedAt = new Date();
+  db.insert(notificationSettings)
+    .values({ id: SETTINGS_ROW_ID, ...value, updatedAt })
+    .onConflictDoUpdate({
+      target: notificationSettings.id,
+      set: { ...value, updatedAt },
+    })
+    .run();
+}
+
+export type NotificationDeliveryRow =
+  typeof notificationDeliveries.$inferSelect;
+
+export function recordNotificationDelivery(
+  db: CockpitDb,
+  value: typeof notificationDeliveries.$inferInsert,
+) {
+  db.insert(notificationDeliveries).values(value).run();
+}
+
+/** The most recent attempt on one channel. */
+export function latestNotificationDelivery(
+  db: CockpitDb,
+  channel: string,
+): NotificationDeliveryRow | undefined {
+  return db
+    .select()
+    .from(notificationDeliveries)
+    .where(eq(notificationDeliveries.channel, channel))
+    .orderBy(desc(notificationDeliveries.at))
+    .limit(1)
+    .get();
+}
+
+export type ScheduledNotificationRow =
+  typeof scheduledNotifications.$inferSelect;
+
+export function insertScheduledNotification(
+  db: CockpitDb,
+  value: typeof scheduledNotifications.$inferInsert,
+): ScheduledNotificationRow {
+  return db.insert(scheduledNotifications).values(value).returning().get();
+}
+
+/** Unfired rows whose time has come, oldest first. */
+export function listDueScheduledNotifications(
+  db: CockpitDb,
+  now: Date,
+  limit = 100,
+): ScheduledNotificationRow[] {
+  return db
+    .select()
+    .from(scheduledNotifications)
+    .where(
+      and(
+        isNull(scheduledNotifications.firedAt),
+        lte(scheduledNotifications.fireAt, now),
+      ),
+    )
+    .orderBy(scheduledNotifications.fireAt)
+    .limit(limit)
+    .all();
+}
+
+export function markScheduledNotificationFired(
+  db: CockpitDb,
+  id: string,
+  at: Date,
+) {
+  db.update(scheduledNotifications)
+    .set({ firedAt: at })
+    .where(eq(scheduledNotifications.id, id))
+    .run();
+}
+
+export function cancelScheduledNotification(db: CockpitDb, id: string) {
+  db.delete(scheduledNotifications)
+    .where(
+      and(
+        eq(scheduledNotifications.id, id),
+        isNull(scheduledNotifications.firedAt),
+      ),
+    )
+    .run();
+}
+
+/** Fired rows older than `before` are history nobody reads; drop them. */
+export function pruneScheduledNotifications(
+  db: CockpitDb,
+  before: Date,
+): number {
+  return db
+    .delete(scheduledNotifications)
+    .where(
+      and(
+        lt(scheduledNotifications.fireAt, before),
+        sql`${scheduledNotifications.firedAt} is not null`,
+      ),
+    )
+    .returning({ id: scheduledNotifications.id })
+    .all().length;
 }

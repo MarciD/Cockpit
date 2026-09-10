@@ -2,6 +2,8 @@
 
 import { Box, Flex } from "@chakra-ui/react";
 import type { ReactNode } from "react";
+import { NotificationToaster } from "./notifications/notification-toaster";
+import { NotificationWatch } from "./notifications/notification-watch";
 import { ProfileRail } from "./profile-rail";
 import { ProfileTabBar } from "./profile-tab-bar";
 
@@ -52,6 +54,8 @@ export function AppShell({
         activeId={activeId}
         display={{ base: "flex", md: "none" }}
       />
+      <NotificationWatch />
+      <NotificationToaster />
     </Flex>
   );
 }

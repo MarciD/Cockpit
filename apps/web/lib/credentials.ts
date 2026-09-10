@@ -10,7 +10,8 @@ import {
   type GoogleCalendarConfig,
 } from "@cockpit/integrations";
 
-export type Provider = "gitlab" | "jira" | "google" | "anthropic" | "calendar";
+export type Provider =
+  "gitlab" | "jira" | "google" | "anthropic" | "calendar" | "ntfy";
 
 /**
  * cockpit shipped with a hardcoded fallback passphrase before COCKPIT_SECRET

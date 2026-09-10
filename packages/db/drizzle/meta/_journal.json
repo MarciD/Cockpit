@@ -50,6 +50,34 @@
       "when": 1788188112658,
       "tag": "0006_fuzzy_jocasta",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1788986314358,
+      "tag": "0007_flaky_starhawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1789016304371,
+      "tag": "0008_noisy_maria_hill",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1789019763459,
+      "tag": "0009_public_domino",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1789039515568,
+      "tag": "0010_elite_colossus",
+      "breakpoints": true
     }
   ]
 }

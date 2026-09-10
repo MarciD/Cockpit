@@ -15,16 +15,32 @@ contract + a worked example; `SECURITY.md` has the threat model.
 - **No automated tests** — personal project (explicit user decision). Verify by
   `pnpm check-types`, `pnpm build`, and driving the app (Playwright MCP against
   `localhost:4000`). Don't add a test framework unless asked.
-- **Match existing patterns.** New widget → copy an existing one. New integration
-  → mirror an existing adapter + `/api/*` route + `integration-cache` helper.
-  **Domain-rich widget** (owns its data model + rules + LLM) → copy the
-  `language-learning` slice: pure `domain/` → `application/` → `infrastructure/`
-  → `composition.ts` under `apps/web/lib/<ctx>/` (server-only by convention),
-  thin `/api/<ctx>/*` routes, and presentation-only `packages/widgets/src/<ctx>/`
-  (full page exported via a package subpath). Dependency rule enforced by
-  structure + TS + `.../ARCHITECTURE.md`, not ESLint. LLM access = the shared
-  `anthropic` API key via `getProviderConfig` (never the Claude subscription —
-  Anthropic disallows programmatic subscription use).
+- **One folder per widget (firm rule, 2026-09-09).** Everything a widget owns
+  lives in `packages/widgets/src/<widget>/`: `README.md` (what it does, how it
+  looks, its settings, routes, tables, jobs, notifications) with
+  `screenshots/`, `index.tsx` (tile), `config.ts`, `types.ts`, `ui/`, `page/`,
+  and — when it has server logic — `server/` (`import "server-only"`;
+  `schema.ts`, pure `domain/` → `application/` → `infrastructure/` →
+  `composition.ts`, `routes.ts`, `jobs.ts`). Widget-specific adapters live in
+  the widget; `packages/integrations` keeps only shared pieces. `apps/web`
+  holds generic glue and cross-cutting services (notifications, images,
+  credentials, integration cache, scheduler). Layout, rules and migration
+  status: `docs/widgets.md#where-a-widget-lives`. All eleven widgets are in this shape as of
+  2026-09-10; `apps/web` holds no widget-specific route, adapter or job any
+  more. Never add one in the old shape. LLM access = the shared `anthropic` API key via
+  `getProviderConfig` (never the Claude subscription — Anthropic disallows
+  programmatic subscription use).
+- **Widget server glue** (landed with `xdcc-watch`, 2026-09-10): a widget's
+  `server/index.ts` exports a `WidgetServerFactory`; `packages/widgets/src/server/registry.ts`
+  lists them, `apps/web/lib/widget-server.ts` builds each once with injected
+  deps (db, `notify`, `scheduleNotification`, credentials, `cachedFetch`, log),
+  `app/api/w/[widget]/[[...path]]/route.ts` dispatches `"<METHOD> <segment>"`
+  route maps, `app/w/[widget]/page.tsx` renders `pageRegistry`, and the
+  scheduler registers each module's jobs. Two traps: `packages/widgets/src/pages.ts`
+  must **not** be `"use client"` (a server component would get client-reference
+  proxies and the page 404s), and notification kinds are re-registered on every
+  `widgetServerModules()` call into a `globalThis` registry, because each Next
+  route bundle gets its own module instances.
 - Keep the Atelier look: tokens/`layerStyles` in `apps/web/lib/theme.ts`
   (`tile`/`raised`/`inset`, `accent`, `status.*`); never hardcode hex — use tokens.
 
@@ -56,7 +72,7 @@ contract + a worked example; `SECURITY.md` has the threat model.
   `useSyncExternalStore`. Widgets don't emit manually — the host (`widget-card.tsx`)
   auto-publishes `widget:context` from a widget's `describe()`. Keep `index.ts`
   React-free (types only); runtime hooks live in `signals.tsx`.
-- **Assistant** (`apps/web/app/api/assistant/route.ts`): Anthropic SDK **Tool
+- **Assistant** (`packages/widgets/src/ai-assistant/server/`): Anthropic SDK **Tool
   Runner** with `stream: true`, read-only tools wrapping `integration-cache` + db
   reads. `profileId` is bound server-side (never model-chosen); no tool takes a
   free URL (SSRF); desk context + tool output are framed as untrusted DATA.
@@ -69,6 +85,31 @@ contract + a worked example; `SECURITY.md` has the threat model.
   data" note — never blank a widget over one failed refresh.
 - **Scheduler**: started once in `apps/web/instrumentation.ts` (guarded by
   `NEXT_RUNTIME === "nodejs"`), globalThis singletons for db + scheduler.
+- **Notifications** (`apps/web/lib/notifications`, layered like a widget slice):
+  server-side `notify({ kind, title, body?, url?, severity?, profileId?,
+dedupeKey?, dedupeWindowMs? })` from `composition.ts` persists a row in
+  `notifications`, then fans out per `domain/routing.ts`: the kind × channel
+  matrix in `notification_preferences` (`*` row = default), quiet hours and
+  the phone's public URL in `notification_settings`, one row per attempt in
+  `notification_deliveries`. Channels: `desktop` = terminal-notifier via
+  `execFile` (macOS host only, click opens `COCKPIT_LOCAL_URL` or
+  `localhost:$PORT`), `phone` = ntfy JSON publish (provider `ntfy` in the
+  credential store, managed by `/api/notifications/phone` because the generic
+  credentials route only knows widget providers). `notify()` never throws.
+  Kinds are `source.event`; register a label in `KIND_LABELS`; `url` must be
+  a same-origin path. `scheduleNotification(fireAt, input)` stores a reminder
+  in `scheduled_notifications`; `reminders:drain` runs every minute and once
+  at boot (marks fired first, then notifies). Producers: recurring tasks
+  firing (`scheduler.ts`), `IntegrationAuthError` in `throughCache` (once a
+  day per provider), croner `onJobError` (once an hour per job),
+  `POST /api/notifications/test` (`{ delayMs }` schedules it instead).
+  Client: `NotificationBell` in the rail and tab bar polls
+  `GET /api/notifications` every 30 s (one shared query); inbox and settings
+  are the existing `Modal` **inside a `Portal`** (the rail's `backdrop-filter`
+  would otherwise box a fixed modal); `NotificationWatch` toasts rows newer
+  than its watermark via the Chakra toaster in `app-shell.tsx` and mirrors the
+  unread count to `setAppBadge`. Assistant tool `get_notifications`. A daily
+  `notifications:prune` job drops read/dismissed rows after 30 days.
 - **Session resume** (language-learning): an in-progress topic session is persisted
   client-side via `usePersistentState` (localStorage, versioned `cockpit:ll:v1:` key
   per profile+language) — the `{ session, cursor }` envelope, so a crash/reload
@@ -91,8 +132,16 @@ contract + a worked example; `SECURITY.md` has the threat model.
 
 - **Anthropic SDK + Zod v3:** `betaZodTool` is typed for Zod v4 → use `betaTool`
   (raw JSON Schema, `as const` on the schema) from `@anthropic-ai/sdk/helpers/beta/json-schema`.
+  Same reason for structured outputs: hand `output_config.format` a raw JSON
+  Schema (`kitchen-coach`), not `zodOutputFormat`. Constrained decoding then
+  guarantees the shape — unlike a forced tool call, whose input is only a hint
+  (`structuredCall` in `language-learning`, see the gotcha below). Every object
+  needs `additionalProperties: false`; no numeric/string constraints, no
+  recursion, `minItems` only 0 or 1.
   Get SDK/model specifics from the bundled `claude-api` skill; model tiers:
   `fast`→`claude-haiku-4-5`, `balanced`→`claude-sonnet-5`, `deep`→`claude-opus-4-8`.
+- **All eleven widgets have a `README.md` + `screenshots/`.** Keep both current
+  when a widget changes; the screenshot tool is `ops/screenshots`.
 - **Zod stays on v3, deliberately.** `widget-config-form.tsx` builds the
   settings form by reading `_def.typeName` off each schema field, which Zod 4
   removes, and `@hookform/resolvers@3`'s `zodResolver` throws outright on a v4

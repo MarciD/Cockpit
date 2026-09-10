@@ -38,10 +38,11 @@ const JSON_HEADERS = { "content-type": "application/json" };
 function fullAppHref(data: Data): string {
   const params = new URLSearchParams({
     profile: data.profileId,
+    language: data.language,
     native: data.native,
   });
   if (data.focusNote) params.set("focus", data.focusNote);
-  return `/learn/${encodeURIComponent(data.language)}?${params.toString()}`;
+  return `/w/language-learning?${params.toString()}`;
 }
 
 function Panel({
@@ -58,7 +59,7 @@ function Panel({
   const loadNext = useCallback(async () => {
     if (!data.hasItems) return;
     const res = await fetch(
-      `/api/learn/next?profileId=${encodeURIComponent(data.profileId)}&language=${encodeURIComponent(data.language)}&count=1&mode=general`,
+      `/api/w/language-learning/next?profileId=${encodeURIComponent(data.profileId)}&language=${encodeURIComponent(data.language)}&count=1&mode=general`,
     );
     if (!res.ok) return;
     const json = (await res.json()) as { exercises: Exercise[] };
@@ -71,7 +72,7 @@ function Panel({
 
   const requestHint = useCallback(
     async (itemId: string): Promise<Hint> => {
-      const res = await fetch("/api/learn/hint", {
+      const res = await fetch("/api/w/language-learning/hint", {
         method: "POST",
         headers: JSON_HEADERS,
         body: JSON.stringify({
@@ -95,7 +96,7 @@ function Panel({
   const handleResult = useCallback(
     async (correct: boolean) => {
       if (!exercise) return;
-      const res = await fetch("/api/learn/answer", {
+      const res = await fetch("/api/w/language-learning/answer", {
         method: "POST",
         headers: JSON_HEADERS,
         body: JSON.stringify({
@@ -230,10 +231,10 @@ const languageLearningWidget = defineWidget<Config, Data>({
       const q = `profileId=${encodeURIComponent(ctx.profileId)}&language=${encodeURIComponent(config.language)}`;
       const [scoreRes, itemsRes] = await Promise.all([
         fetch(
-          `/api/learn/score?${q}&today=${localToday()}&goal=${config.dailyGoalItems}`,
+          `/api/w/language-learning/score?${q}&today=${localToday()}&goal=${config.dailyGoalItems}`,
           { signal: ctx.signal },
         ),
-        fetch(`/api/learn/items?${q}`, { signal: ctx.signal }),
+        fetch(`/api/w/language-learning/items?${q}`, { signal: ctx.signal }),
       ]);
       const score = scoreRes.ok
         ? ((await scoreRes.json()) as ScoreSummary)

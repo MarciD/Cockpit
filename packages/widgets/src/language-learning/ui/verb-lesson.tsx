@@ -75,7 +75,7 @@ export function VerbLessonPanel(props: VerbLessonPanelProps) {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/learn/verb/lesson", {
+        const res = await fetch("/api/w/language-learning/verb/lesson", {
           method: "POST",
           headers: JSON_HEADERS,
           body: JSON.stringify({
@@ -120,7 +120,7 @@ export function VerbLessonPanel(props: VerbLessonPanelProps) {
   const recordMastery = useCallback(
     (correct: boolean) => {
       if (!verbItemId) return;
-      void fetch("/api/learn/answer", {
+      void fetch("/api/w/language-learning/answer", {
         method: "POST",
         headers: JSON_HEADERS,
         body: JSON.stringify({
@@ -307,7 +307,7 @@ export function VerbLessonPanel(props: VerbLessonPanelProps) {
               onClick={async () => {
                 setGrading(true);
                 try {
-                  const res = await fetch("/api/learn/grade", {
+                  const res = await fetch("/api/w/language-learning/grade", {
                     method: "POST",
                     headers: JSON_HEADERS,
                     body: JSON.stringify({

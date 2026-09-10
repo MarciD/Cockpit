@@ -5,7 +5,6 @@
 // by the /api/assistant route; it must never appear in this config.
 
 import { useEffect, useRef, useState } from "react";
-import { z } from "zod";
 import { Box, HStack, Stack, chakra } from "@chakra-ui/react";
 import {
   defineWidget,
@@ -14,13 +13,11 @@ import {
 } from "@cockpit/widget-sdk";
 import { useSignals } from "@cockpit/widget-sdk/signals";
 import { ConnectPrompt } from "../lib/connect";
-
-const configSchema = z.object({
-  model: z.enum(["fast", "balanced", "deep"]),
-  useDeskContext: z.boolean(),
-  systemNote: z.string().optional(),
-});
-type Config = z.infer<typeof configSchema>;
+import {
+  configSchema,
+  defaultConfig,
+  type AssistantConfig as Config,
+} from "./config";
 
 interface Data {
   profileId: string;
@@ -85,7 +82,7 @@ function Panel({
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      const res = await fetch("/api/assistant", {
+      const res = await fetch("/api/w/ai-assistant", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -251,7 +248,7 @@ const aiAssistantWidget = defineWidget<Config, Data>({
   icon: () => <span aria-hidden>✳</span>,
   category: "ai",
   configSchema,
-  defaultConfig: { model: "balanced", useDeskContext: true, systemNote: "" },
+  defaultConfig,
   connection: {
     provider: "anthropic",
     label: "Claude",

@@ -4,6 +4,7 @@ import NextLink from "next/link";
 import type { FlexProps } from "@chakra-ui/react";
 import { Box, Flex, Stack, Text } from "@chakra-ui/react";
 import { accentHex, monogram } from "@/lib/accent";
+import { NotificationBell } from "./notifications/notification-bell";
 
 interface RailProfile {
   id: string;
@@ -90,6 +91,7 @@ export function ProfileRail({ profiles, activeId, ...rest }: ProfileRailProps) {
       </Stack>
 
       <Box flex="1" />
+      <NotificationBell size={40} />
     </Flex>
   );
 }

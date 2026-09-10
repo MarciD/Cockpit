@@ -1,10 +1,11 @@
-import { z } from "zod";
 import { Box, Flex, HStack, Link, Stack, Text } from "@chakra-ui/react";
 import { defineWidget, type WidgetComponentProps } from "@cockpit/widget-sdk";
+import {
+  configSchema,
+  defaultConfig,
+  type JiraIssuesConfig as Config,
+} from "./config";
 import { ConnectPrompt, ReconnectPrompt } from "../lib/connect";
-
-const configSchema = z.object({});
-type Config = z.infer<typeof configSchema>;
 
 interface Issue {
   key: string;
@@ -195,7 +196,7 @@ const jiraMyIssuesWidget = defineWidget<Config, Data>({
   icon: () => <span aria-hidden>▣</span>,
   category: "issues",
   configSchema,
-  defaultConfig: {},
+  defaultConfig,
   connection: {
     provider: "jira",
     label: "Jira",
@@ -210,7 +211,7 @@ const jiraMyIssuesWidget = defineWidget<Config, Data>({
     queryKey: (_config, profileId) => ["jira-my-issues", profileId],
     queryFn: async (ctx) => {
       const res = await fetch(
-        `/api/jira/my-issues${ctx.force ? "?refresh=1" : ""}`,
+        `/api/w/jira-my-issues${ctx.force ? "?refresh=1" : ""}`,
         { signal: ctx.signal },
       );
       if (!res.ok) throw new Error(`Request failed (HTTP ${res.status})`);

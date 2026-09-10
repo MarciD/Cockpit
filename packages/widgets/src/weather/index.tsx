@@ -1,28 +1,11 @@
-import { z } from "zod";
 import { Flex, HStack, Stack, Text } from "@chakra-ui/react";
 import { defineWidget, type WidgetComponentProps } from "@cockpit/widget-sdk";
-
-const configSchema = z.object({
-  latitude: z.number(),
-  longitude: z.number(),
-  label: z.string(),
-});
-type Config = z.infer<typeof configSchema>;
-
-interface WeatherData {
-  label: string;
-  tempC: number;
-  code: number;
-  condition: string;
-  highC: number;
-  lowC: number;
-  hourly: { time: string; tempC: number }[];
-}
-interface Data {
-  configured: boolean;
-  items?: WeatherData;
-  error?: string;
-}
+import {
+  configSchema,
+  defaultConfig,
+  type WeatherConfig as Config,
+} from "./config";
+import type { WeatherData as Data } from "./types";
 
 function hourLabel(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit" });
@@ -96,7 +79,7 @@ const weatherWidget = defineWidget<Config, Data>({
   icon: () => <span aria-hidden>☀</span>,
   category: "custom",
   configSchema,
-  defaultConfig: { latitude: 52.52, longitude: 13.405, label: "Berlin" },
+  defaultConfig,
   layout: { defaultW: 3, defaultH: 5, minW: 3, minH: 3 },
   data: {
     queryKey: (config, profileId) => [
@@ -107,7 +90,7 @@ const weatherWidget = defineWidget<Config, Data>({
     ],
     queryFn: async (ctx, config) => {
       const res = await fetch(
-        `/api/weather?lat=${config.latitude}&lon=${config.longitude}&label=${encodeURIComponent(config.label)}${ctx.force ? "&refresh=1" : ""}`,
+        `/api/w/weather?lat=${config.latitude}&lon=${config.longitude}&label=${encodeURIComponent(config.label)}${ctx.force ? "&refresh=1" : ""}`,
         { signal: ctx.signal },
       );
       if (!res.ok) throw new Error(`Request failed (HTTP ${res.status})`);

@@ -13,7 +13,7 @@ Turborepo + pnpm. One app, five packages:
 apps/web                  Next.js 15 (App Router) — UI, /api routes, the scheduler
 packages/widget-sdk       the defineWidget() contract + the signal bus
 packages/widgets          the widget catalog, one folder each
-packages/integrations     provider adapters + the credential store + the URL guard
+packages/integrations     the credential store, the URL guard, shared error types
 packages/db               Drizzle schema, queries, migrations (better-sqlite3)
 packages/project-setup    shared tsconfig + Prettier config
 ```
@@ -102,9 +102,40 @@ imports `lib/boot.ts`, which:
    container start set themselves up;
 3. starts the croner scheduler.
 
-The scheduler keeps integration caches warm every 5 minutes and runs one cron
-job per enabled recurring task. It has **no cross-process lock**: run exactly one
+The scheduler owns no schedule of its own beyond the notification chores: it
+registers whatever jobs each widget declares (cache warm-ups, the release
+watch, one cron per enabled recurring task). It has **no cross-process lock**: run exactly one
 instance, or every process will run every job against the same SQLite file.
+
+## Notifications
+
+One server-side entry point, `notify()` in `apps/web/lib/notifications`, and
+one table. The row is the inbox entry and the source of truth; delivery
+channels (a phone push, a desktop banner) fan out from it and may fail without
+losing it. `notify()` never throws — its callers are scheduled jobs and cache
+refreshes that must not die over a notification — and it collapses rows that
+share a `dedupeKey` inside a window, so a flapping job or a rejected token is
+reported once, not every five minutes.
+
+Producers live where the knowledge is: a recurring task firing in the
+scheduler, an `IntegrationAuthError` in `throughCache`, croner's `catch`
+callback, and `scheduleNotification(fireAt, input)` for anything that should
+arrive later (a minute-cron drains due rows, once at boot too). The browser
+learns about new rows by polling `GET /api/notifications` every 30 seconds from
+the bell in the rail (one shared TanStack query); rows newer than the last poll
+become toasts, the unread count goes onto the installed app's badge, and the
+inbox opens as the ordinary modal in a portal. No SSE and no web push: the
+inbox has to be persisted anyway, and polling an inbox is the whole cost.
+
+Beyond the inbox there are two channels, routed per kind by a small matrix the
+settings panel edits, held back during quiet hours, and each attempt logged so
+the panel can say what last happened. `desktop` shells out to
+terminal-notifier — only meaningful on the Mac the launchd agent runs on, and
+chosen over `osascript`, whose banners are attributed to Script Editor and open
+nothing. `phone` publishes one JSON message to ntfy (ntfy.sh or self-hosted);
+the topic and optional token live in the credential store under provider
+`ntfy`, and a tap opens cockpit at the public URL you configure, which is the
+one thing the phone must be able to reach.
 
 ## The signal bus
 
@@ -123,9 +154,10 @@ subpath.
 
 ## The assistant
 
-`/api/assistant` runs the Anthropic SDK's Tool Runner with `stream: true` over
+The assistant widget's route runs the Anthropic SDK's Tool Runner with `stream: true` over
 **read-only** tools: open MRs, Jira issues, today's events, weather, to-dos,
-recurring tasks, and a branch-merge check. Deliberate constraints:
+recurring tasks, unread notifications, and a branch-merge check. Every tool but
+the inbox one is contributed by the widget that owns that data. Deliberate constraints:
 
 - `profileId` is bound server-side from the request, never chosen by the model.
 - No tool takes a free-form URL, so the model cannot direct an outbound request.
@@ -160,28 +192,37 @@ Overrides that must beat Chakra's cascade layers or un-layered vendor CSS live i
 ## Domain-rich widgets
 
 Most widgets are thin: fetch JSON, render it. When a widget owns a real domain —
-its own data model, rules, and LLM or database access — the widget package stays
-presentation-only and the domain goes server-side as a layered slice:
+its own data model, rules, and LLM or database access — the domain goes into the
+widget's own `server/` folder as a layered slice. A widget is one folder:
 
 ```
-apps/web/lib/<context>/
-  domain/          pure — no framework, no db, no LLM imports
-  application/     use cases over ports
-  infrastructure/  adapters: Drizzle repositories, LLM clients, CSV
-  composition.ts   wires adapters to services
-apps/web/app/api/<context>/*/route.ts    thin handlers
-packages/widgets/src/<context>/          the tile + any full page
+packages/widgets/src/<widget>/
+  README.md  screenshots/                what it is and what it looks like
+  index.tsx  config.ts  types.ts  ui/  page/   the client half
+  server/                                     the server half
+    index.ts       import "server-only"
+    schema.ts      its Drizzle tables
+    domain/        pure — no framework, no db, no LLM imports
+    application/   use cases over ports
+    infrastructure/ adapters: Drizzle repositories, LLM clients, provider APIs
+    composition.ts wires adapters to services
+    routes.ts      handlers, mounted by the generic /api/w/[widget] route
+    jobs.ts        cron jobs, registered by the scheduler
 ```
 
 Dependencies point one way only: `domain → nothing`, `application → domain`,
-`infrastructure → domain`, `routes and UI → everything below`. Nothing enforces
-that automatically — there is no ESLint in this repo — so it holds by structure,
-TypeScript, and review.
+`infrastructure → domain`, `routes and UI → everything below`. The client half
+never imports `server/`; `server-only` makes that a build error. The rest holds
+by structure, TypeScript, and review — there is no ESLint in this repo.
 
 The HTTP boundary is what keeps the client widget and the server domain apart: a
 full page is exported from the widget package on its own subpath and rendered by
-a thin `app/.../page.tsx`. `language-learning` is the worked example; see
-[its ARCHITECTURE.md](../packages/widgets/src/language-learning/ARCHITECTURE.md).
+a thin page route. Cross-cutting services (notifications, images, credentials,
+the integration cache, the scheduler) stay in `apps/web/lib`; widget-specific
+provider adapters live in the widget. `language-learning` is the worked example of the layering
+(see [its ARCHITECTURE.md](../packages/widgets/src/language-learning/ARCHITECTURE.md)).
+The rule and the layout are in
+[widgets.md](widgets.md#where-a-widget-lives).
 
 ## Deliberate omissions
 

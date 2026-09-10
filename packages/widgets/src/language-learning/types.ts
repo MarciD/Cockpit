@@ -1,4 +1,4 @@
-// Client-side DTOs mirroring the /api/learn JSON contract. The widget package is
+// Client-side DTOs mirroring the widget's JSON contract. The widget package is
 // presentation-only and never imports the server-side domain — these are the
 // boundary types.
 

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  index,
   integer,
   primaryKey,
   sqliteTable,
@@ -222,3 +223,85 @@ export const learningSessions = sqliteTable("learning_sessions", {
   correct: integer("correct").notNull().default(0),
   mode: text("mode").notNull(), // 'words' | 'verbs' | 'level' | 'general'
 });
+
+/**
+ * App-wide notifications. The row is the inbox entry and the source of truth;
+ * delivery channels (desktop, phone) fan out from it. `profile_id` is null for
+ * app-level events (a job failed, a credential was rejected).
+ */
+export const notifications = sqliteTable(
+  "notifications",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id").references(() => profiles.id, {
+      onDelete: "cascade",
+    }),
+    kind: text("kind").notNull(), // namespaced, e.g. 'tasks.due', 'integration.auth-failed'
+    severity: text("severity").notNull().default("info"), // 'info' | 'action' | 'urgent'
+    title: text("title").notNull(),
+    body: text("body"),
+    url: text("url"), // same-origin deep link
+    dataJson: text("data_json", { mode: "json" }),
+    dedupeKey: text("dedupe_key"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(now),
+    readAt: integer("read_at", { mode: "timestamp" }),
+    dismissedAt: integer("dismissed_at", { mode: "timestamp" }),
+  },
+  (t) => [
+    index("notifications_dedupe_idx").on(t.dedupeKey),
+    index("notifications_created_idx").on(t.createdAt),
+  ],
+);
+
+/** Which delivery channels a notification kind fans out to; `*` is the default row. */
+export const notificationPreferences = sqliteTable("notification_preferences", {
+  kind: text("kind").primaryKey(),
+  channelsJson: text("channels_json", { mode: "json" }).notNull(), // ChannelId[]
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(now),
+});
+
+/** Single-row global notification settings (id is always 'default'). */
+export const notificationSettings = sqliteTable("notification_settings", {
+  id: text("id").primaryKey(),
+  quietFrom: text("quiet_from"), // 'HH:MM' or null
+  quietTo: text("quiet_to"),
+  publicUrl: text("public_url"), // how the phone reaches cockpit, e.g. https://mac.tailnet.ts.net
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(now),
+});
+
+/** One row per channel attempt, so the settings panel can show what last happened. */
+export const notificationDeliveries = sqliteTable(
+  "notification_deliveries",
+  {
+    id: text("id").primaryKey(),
+    notificationId: text("notification_id")
+      .notNull()
+      .references(() => notifications.id, { onDelete: "cascade" }),
+    channel: text("channel").notNull(),
+    status: text("status").notNull(), // 'sent' | 'failed' | 'skipped'
+    error: text("error"),
+    at: integer("at", { mode: "timestamp" }).notNull().default(now),
+  },
+  (t) => [index("notification_deliveries_channel_idx").on(t.channel, t.at)],
+);
+
+/** A notification to raise later; a minute-cron drains due rows into notify(). */
+export const scheduledNotifications = sqliteTable(
+  "scheduled_notifications",
+  {
+    id: text("id").primaryKey(),
+    fireAt: integer("fire_at", { mode: "timestamp" }).notNull(),
+    payloadJson: text("payload_json", { mode: "json" }).notNull(), // NotificationInput
+    firedAt: integer("fired_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(now),
+  },
+  (t) => [index("scheduled_notifications_fire_idx").on(t.fireAt)],
+);

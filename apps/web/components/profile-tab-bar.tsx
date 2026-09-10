@@ -4,6 +4,7 @@ import NextLink from "next/link";
 import type { FlexProps } from "@chakra-ui/react";
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { accentHex, monogram } from "@/lib/accent";
+import { NotificationBell } from "./notifications/notification-bell";
 
 interface TabBarProfile {
   id: string;
@@ -98,6 +99,7 @@ export function ProfileTabBar({
           </NextLink>
         );
       })}
+      <NotificationBell size={44} />
     </Flex>
   );
 }

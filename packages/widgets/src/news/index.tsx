@@ -1,25 +1,14 @@
-import { z } from "zod";
+"use client";
+
 import { Link, Stack, Text } from "@chakra-ui/react";
 import { defineWidget, type WidgetComponentProps } from "@cockpit/widget-sdk";
-
-const configSchema = z.object({
-  feeds: z.string(),
-  limit: z.number(),
-});
-type Config = z.infer<typeof configSchema>;
-
-interface NewsItem {
-  id: string;
-  title: string;
-  link: string;
-  source: string;
-  publishedAt: string;
-}
-interface Data {
-  configured: boolean;
-  items?: NewsItem[];
-  error?: string;
-}
+import {
+  configSchema,
+  defaultConfig,
+  splitFeeds,
+  type NewsConfig as Config,
+} from "./config";
+import type { NewsData as Data } from "./types";
 
 function relTime(iso: string): string {
   if (!iso) return "";
@@ -28,13 +17,6 @@ function relTime(iso: string): string {
   if (h < 1) return `${Math.max(1, Math.floor(ms / 60_000))}M`;
   if (h < 24) return `${h}H`;
   return `${Math.floor(h / 24)}D`;
-}
-
-function splitFeeds(raw: string): string[] {
-  return raw
-    .split(/[\n,]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
 }
 
 function Panel({ data }: WidgetComponentProps<Config, Data>) {
@@ -95,7 +77,7 @@ const newsWidget = defineWidget<Config, Data>({
   icon: () => <span aria-hidden>❋</span>,
   category: "custom",
   configSchema,
-  defaultConfig: { feeds: "https://hnrss.org/frontpage", limit: 8 },
+  defaultConfig,
   layout: { defaultW: 3, defaultH: 5, minW: 3, minH: 3, mobileH: 6 },
   data: {
     queryKey: (config, profileId) => [
@@ -108,7 +90,7 @@ const newsWidget = defineWidget<Config, Data>({
       const feeds = splitFeeds(config.feeds);
       const qs = feeds.map((f) => `feed=${encodeURIComponent(f)}`).join("&");
       const res = await fetch(
-        `/api/news?${qs}&limit=${config.limit}${ctx.force ? "&refresh=1" : ""}`,
+        `/api/w/news?${qs}&limit=${config.limit}${ctx.force ? "&refresh=1" : ""}`,
         { signal: ctx.signal },
       );
       if (!res.ok) throw new Error(`Request failed (HTTP ${res.status})`);
