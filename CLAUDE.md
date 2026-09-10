@@ -35,6 +35,17 @@ contract + a worked example; `SECURITY.md` has the threat model.
   the rule. LLM access = the shared `anthropic` API key via
   `getProviderConfig` (never the Claude subscription — Anthropic disallows
   programmatic subscription use).
+- **Widget server glue** (landed with `xdcc-watch`, 2026-09-10): a widget's
+  `server/index.ts` exports a `WidgetServerFactory`; `packages/widgets/src/server/registry.ts`
+  lists them, `apps/web/lib/widget-server.ts` builds each once with injected
+  deps (db, `notify`, `scheduleNotification`, credentials, `cachedFetch`, log),
+  `app/api/w/[widget]/[[...path]]/route.ts` dispatches `"<METHOD> <segment>"`
+  route maps, `app/w/[widget]/page.tsx` renders `pageRegistry`, and the
+  scheduler registers each module's jobs. Two traps: `packages/widgets/src/pages.ts`
+  must **not** be `"use client"` (a server component would get client-reference
+  proxies and the page 404s), and notification kinds are re-registered on every
+  `widgetServerModules()` call into a `globalThis` registry, because each Next
+  route bundle gets its own module instances.
 - Keep the Atelier look: tokens/`layerStyles` in `apps/web/lib/theme.ts`
   (`tile`/`raised`/`inset`, `accent`, `status.*`); never hardcode hex — use tokens.
 
@@ -235,6 +246,7 @@ dedupeKey?, dedupeWindowMs? })` from `composition.ts` persists a row in
 - `chat_messages` / `usage_events` / `suggestions` tables exist but the assistant
   doesn't persist history yet, and the usage→widget-suggestion loop isn't built.
 - Global settings / global API keys are deferred (creds are per-widget for now).
-- **Widget layout migration.** All ten widgets have a `README.md` +
-  `screenshots/` (2026-09-09); nine still keep server code outside their
-  folder (see the one-folder rule above). Move one when it is next touched.
+- **Widget layout migration.** All eleven widgets have a `README.md` +
+  `screenshots/`; only `xdcc-watch` is fully in the one-folder shape, the other
+  ten still keep server code outside their folder (see the rule above). Move
+  one when it is next touched.

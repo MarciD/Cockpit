@@ -72,12 +72,18 @@ export interface Routing {
   quiet: boolean;
 }
 
-/** The external channels this kind reaches right now. Quiet hours hold them all. */
+/**
+ * The external channels this kind reaches right now. An explicit `override`
+ * (a producer's per-item choice) replaces the preferences; quiet hours hold
+ * everything either way.
+ */
 export function routeFor(
   kind: string,
   prefs: RoutingPreferences,
   now: Date,
+  override: ChannelId[] | null = null,
 ): Routing {
   const quiet = isQuietTime(now, prefs.quiet);
-  return { channels: quiet ? [] : channelsFor(kind, prefs.byKind), quiet };
+  const channels = override ?? channelsFor(kind, prefs.byKind);
+  return { channels: quiet ? [] : channels, quiet };
 }

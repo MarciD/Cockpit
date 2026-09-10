@@ -14,7 +14,7 @@ import type {
   NotificationRepository,
   PreferencesRepository,
 } from "../domain/ports";
-import { routeFor } from "../domain/routing";
+import { routeFor, type ChannelId } from "../domain/routing";
 
 const describeError = (err: unknown): string =>
   err instanceof Error ? err.message : String(err);
@@ -60,13 +60,13 @@ export class NotifyService {
         if (earlier) return null;
       }
 
-      const { dedupeWindowMs: _window, ...stored } = normalized;
+      const { dedupeWindowMs: _window, channels, ...stored } = normalized;
       const row = this.repo.insert({
         ...stored,
         id: this.newId(),
         createdAt: now,
       });
-      const deliveries = await this.fanOut(row, now);
+      const deliveries = await this.fanOut(row, now, channels);
       return { notification: row, deliveries };
     } catch (err) {
       this.log.warn(
@@ -80,9 +80,10 @@ export class NotifyService {
   private async fanOut(
     row: Notification,
     now: Date,
+    override: ChannelId[] | null,
   ): Promise<DeliveryOutcome[]> {
     const stored = this.prefs.load();
-    const routing = routeFor(row.kind, stored, now);
+    const routing = routeFor(row.kind, stored, now, override);
     const context: DeliveryContext = {
       publicUrl: stored.publicUrl,
       localUrl: this.context.localUrl,

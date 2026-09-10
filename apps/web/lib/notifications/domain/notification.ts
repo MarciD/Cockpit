@@ -27,6 +27,8 @@ export interface NotificationInput {
   /** Rows sharing a key within `dedupeWindowMs` collapse into the first one. */
   dedupeKey?: string;
   dedupeWindowMs?: number;
+  /** Explicit external channels; overrides the per-kind preferences (quiet hours still apply). */
+  channels?: ("desktop" | "phone")[];
 }
 
 /** Validated, trimmed input — what the repository stores. */
@@ -40,9 +42,13 @@ export interface NormalizedInput {
   data: Record<string, unknown> | null;
   dedupeKey: string | null;
   dedupeWindowMs: number;
+  channels: ("desktop" | "phone")[] | null;
 }
 
-export interface Notification extends Omit<NormalizedInput, "dedupeWindowMs"> {
+export interface Notification extends Omit<
+  NormalizedInput,
+  "dedupeWindowMs" | "channels"
+> {
   id: string;
   createdAt: Date;
   readAt: Date | null;
@@ -100,6 +106,7 @@ export function normalizeInput(input: NotificationInput): NormalizedInput {
     data: input.data ?? null,
     dedupeKey: input.dedupeKey?.trim() || null,
     dedupeWindowMs: input.dedupeWindowMs ?? DEFAULT_DEDUPE_WINDOW_MS,
+    channels: input.channels ? Array.from(new Set(input.channels)) : null,
   };
 }
 

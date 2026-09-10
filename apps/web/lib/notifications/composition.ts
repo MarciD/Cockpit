@@ -16,6 +16,7 @@ import { DrizzleDeliveryLog } from "./infrastructure/drizzle-delivery-log";
 import { DrizzleNotificationRepository } from "./infrastructure/drizzle-notification-repository";
 import { DrizzlePreferencesRepository } from "./infrastructure/drizzle-preferences-repository";
 import { DrizzleReminderRepository } from "./infrastructure/drizzle-reminder-repository";
+import { allKindLabels } from "./kind-registry";
 
 export interface NotificationServices {
   notify: NotifyService;
@@ -61,7 +62,13 @@ export function notificationServices(): NotificationServices {
   return {
     notify,
     inbox: new InboxService(repo, clock),
-    preferences: new PreferencesService(prefs, channels, deliveries, clock),
+    preferences: new PreferencesService(
+      prefs,
+      channels,
+      deliveries,
+      clock,
+      allKindLabels,
+    ),
     reminders: new ReminderService(
       new DrizzleReminderRepository(db),
       notify,

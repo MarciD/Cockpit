@@ -101,17 +101,29 @@ Rules:
   server with scratch data, see its README), the widget alone on a desk, at 2×.
   Retake them when the widget's look changes.
 
-**Status (2026-09-09):** every widget has a README with screenshots. Nine
+**Status (2026-09-10):** `xdcc-watch` is the first widget built this way and
+brought the glue with it: `packages/widgets/src/server/{contract,registry}.ts`,
+`packages/widgets/src/pages.ts`, `apps/web/lib/widget-server.ts`,
+`apps/web/app/api/w/[widget]/[[...path]]/route.ts`,
+`apps/web/app/w/[widget]/page.tsx`, the scheduler hook and the drizzle-kit
+schema glob. Every widget has a README with screenshots. The other nine
 still keep server pieces in `packages/integrations`,
 `apps/web/lib/integration-cache.ts`, `apps/web/lib/credentials.ts`,
 `apps/web/lib/scheduler.ts` and `apps/web/app/api/*`; `language-learning` has
 its whole slice under `apps/web/lib/language-learning/` with 17 route files.
-The generic glue (server registry, `/api/w/[widget]` route, `/w/[widget]`
-page, scheduler hook, drizzle-kit schema glob) does not exist yet and lands
-with the first widget built in this shape. Until then: a new widget without
-server code already follows the folder + README rule; a widget with server code
-is built in this shape and brings the glue with it; an existing widget is
-ported when next touched. Never add to the old shape.
+A new widget follows the rule from the start; an existing one is ported when
+next touched. Never add to the old shape.
+
+Two things the glue makes non-obvious:
+
+- **`pages.ts` must not be a `"use client"` module.** A server component
+  importing one receives client-reference proxies, so the page lookup comes
+  back undefined and the route 404s. The page components carry their own
+  `"use client"`.
+- **A widget's notification kinds register when its server module is built**,
+  and Next gives each route bundle its own module instances — so
+  `widgetServerModules()` re-registers them on every call, and the kind
+  registry lives on `globalThis`.
 
 ---
 

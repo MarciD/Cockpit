@@ -5,19 +5,28 @@
   "type": "module",
   "exports": {
     ".": "./src/registry.ts",
-    "./language-learning/page": "./src/language-learning/page/full-page.tsx"
+    "./pages": "./src/pages.ts",
+    "./server": "./src/server/registry.ts",
+    "./server/contract": "./src/server/contract.ts",
+    "./language-learning/page": "./src/language-learning/page/full-page.tsx",
+    "./xdcc-watch/server": "./src/xdcc-watch/server/index.ts"
   },
   "types": "./src/registry.ts",
   "scripts": {
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@cockpit/db": "workspace:*",
     "@cockpit/widget-sdk": "workspace:*",
+    "@viren070/parse-torrent-title": "0.8.8",
+    "drizzle-orm": "^0.45.2",
+    "server-only": "0.0.1",
     "zod": "^3.25.76"
   },
   "peerDependencies": {
     "@chakra-ui/react": "^3",
     "@tanstack/react-query": "^5",
+    "next": "^15.5.25",
     "react": "^19"
   },
   "devDependencies": {
@@ -25,6 +34,7 @@
     "@cockpit/project-setup": "workspace:*",
     "@tanstack/react-query": "^5.102.8",
     "@types/react": "^19.2.18",
+    "next": "^15.5.25",
     "react": "^19.2.8",
     "typescript": "^5.9.3"
   }

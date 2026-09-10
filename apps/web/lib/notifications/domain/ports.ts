@@ -7,7 +7,7 @@ import type { ChannelId, QuietHours } from "./routing";
 
 export interface NewNotification extends Omit<
   NormalizedInput,
-  "dedupeWindowMs"
+  "dedupeWindowMs" | "channels"
 > {
   id: string;
   createdAt: Date;

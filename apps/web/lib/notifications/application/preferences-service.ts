@@ -10,7 +10,6 @@ import { isValidKind } from "../domain/notification";
 import {
   CLOCK_PATTERN,
   DEFAULT_KIND,
-  KIND_LABELS,
   isChannelId,
   isQuietTime,
   type ChannelId,
@@ -112,9 +111,11 @@ export class PreferencesService {
     private readonly channels: readonly NotificationChannel[],
     private readonly deliveries: DeliveryLog,
     private readonly clock: Clock,
+    private readonly kindLabels: () => Record<string, string>,
   ) {}
 
   async get(): Promise<PreferencesView> {
+    const labels = this.kindLabels();
     const stored = this.prefs.load();
     const channels = await Promise.all(
       this.channels.map(async (channel) => ({
@@ -125,14 +126,14 @@ export class PreferencesService {
       })),
     );
     const known = new Set([
-      ...Object.keys(KIND_LABELS),
+      ...Object.keys(labels),
       ...Object.keys(stored.byKind),
     ]);
     known.delete(DEFAULT_KIND);
     return {
       kinds: [...known]
         .sort()
-        .map((kind) => ({ kind, label: KIND_LABELS[kind] ?? kind })),
+        .map((kind) => ({ kind, label: labels[kind] ?? kind })),
       channels,
       byKind: stored.byKind,
       quiet: stored.quiet,

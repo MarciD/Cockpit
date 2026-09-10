@@ -7,12 +7,14 @@ import {
   getJiraData,
 } from "./integration-cache";
 import { notificationServices, notify } from "./notifications/composition";
+import { widgetServerModules } from "./widget-server";
 
 interface SchedulerState {
   started: boolean;
   refreshJob: Cron | null;
   pruneJob: Cron | null;
   remindersJob: Cron | null;
+  widgetJobs: Cron[];
   taskJobs: Map<string, Cron>;
 }
 
@@ -28,6 +30,7 @@ const state: SchedulerState = (globalForScheduler.cockpitScheduler ??= {
   refreshJob: null,
   pruneJob: null,
   remindersJob: null,
+  widgetJobs: [],
   taskJobs: new Map(),
 });
 
@@ -138,6 +141,19 @@ export function startScheduler(): void {
       notificationServices().inbox.prune();
     },
   );
+
+  // Every widget's jobs, from its server module (one-folder rule).
+  for (const mod of Object.values(widgetServerModules())) {
+    for (const job of mod.jobs ?? []) {
+      state.widgetJobs.push(
+        new Cron(
+          job.cron,
+          { name: `${mod.id}:${job.name}`, protect: true, catch: onJobError },
+          job.run,
+        ),
+      );
+    }
+  }
 
   reloadRecurringTasks();
   process.stdout.write("[cockpit] scheduler started\n");
