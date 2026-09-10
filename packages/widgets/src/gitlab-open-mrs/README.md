@@ -30,7 +30,7 @@ the connection means re-entering both fields.
 
 | What     | How                                                                                                                                                                                                          |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Reads    | `GET /api/gitlab/merge-requests`; every 5 min, stale after 60 s, manual sync forces a refetch                                                                                                                |
+| Reads    | `GET /api/w/gitlab-open-mrs`; every 5 min, stale after 60 s, manual sync forces a refetch                                                                                                                    |
 | Response | `{ configured, items?: { mine: Mr[], assigned: Mr[] }, error?, authFailed? }`; each `Mr` carries `status`, `approvalsLeft`, `approvedBy`, `draft`, `comments`, `reviewers`, `myReview`, `updatedAfterReview` |
 | Cache    | `throughCache("gitlab", …)`, key `integration:gitlab`, 5-minute TTL, stale data served on failure                                                                                                            |
 | Provider | GitLab REST v4: MRs created by me, my user, MRs where I am reviewer, then per MR (first 15 of each list) approvals, and for review requests notes, last commit and reviewers                                 |
@@ -47,16 +47,11 @@ updated since you reviewed; 3 authored (1 awaiting review).`
 
 6 × 8 by default, minimum 4 × 5, 11 rows on phones.
 
-## Where the code lives today
+## Where the code lives
 
-- Tile: `index.tsx` (this folder).
-- Route: `apps/web/app/api/gitlab/merge-requests/route.ts`.
-- Cache helper: `getGitlabData` in `apps/web/lib/integration-cache.ts`; the
-  warm-up in `apps/web/lib/scheduler.ts`.
-- Adapter: `packages/integrations/src/gitlab.ts`.
-
-Pending under the one-folder rule: adapter, route and the warm-up job move
-into `server/`; the two assistant tools become this widget's `assistantTools`.
+All of it is in this folder: `index.tsx` (tile), `config.ts` and `server/`
+with the GitLab adapter, the route, the five-minute warm job and the two
+assistant tools. The app only mounts it.
 
 ## Known limits
 

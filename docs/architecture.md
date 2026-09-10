@@ -13,7 +13,7 @@ Turborepo + pnpm. One app, five packages:
 apps/web                  Next.js 15 (App Router) — UI, /api routes, the scheduler
 packages/widget-sdk       the defineWidget() contract + the signal bus
 packages/widgets          the widget catalog, one folder each
-packages/integrations     provider adapters + the credential store + the URL guard
+packages/integrations     the credential store, the URL guard, shared error types
 packages/db               Drizzle schema, queries, migrations (better-sqlite3)
 packages/project-setup    shared tsconfig + Prettier config
 ```
@@ -102,8 +102,9 @@ imports `lib/boot.ts`, which:
    container start set themselves up;
 3. starts the croner scheduler.
 
-The scheduler keeps integration caches warm every 5 minutes and runs one cron
-job per enabled recurring task. It has **no cross-process lock**: run exactly one
+The scheduler owns no schedule of its own beyond the notification chores: it
+registers whatever jobs each widget declares (cache warm-ups, the release
+watch, one cron per enabled recurring task). It has **no cross-process lock**: run exactly one
 instance, or every process will run every job against the same SQLite file.
 
 ## Notifications
@@ -153,9 +154,10 @@ subpath.
 
 ## The assistant
 
-`/api/assistant` runs the Anthropic SDK's Tool Runner with `stream: true` over
+The assistant widget's route runs the Anthropic SDK's Tool Runner with `stream: true` over
 **read-only** tools: open MRs, Jira issues, today's events, weather, to-dos,
-recurring tasks, and a branch-merge check. Deliberate constraints:
+recurring tasks, unread notifications, and a branch-merge check. Every tool but
+the inbox one is contributed by the widget that owns that data. Deliberate constraints:
 
 - `profileId` is bound server-side from the request, never chosen by the model.
 - No tool takes a free-form URL, so the model cannot direct an outbound request.
@@ -217,11 +219,9 @@ The HTTP boundary is what keeps the client widget and the server domain apart: a
 full page is exported from the widget package on its own subpath and rendered by
 a thin page route. Cross-cutting services (notifications, images, credentials,
 the integration cache, the scheduler) stay in `apps/web/lib`; widget-specific
-provider adapters live in the widget. `language-learning` shows the layering
-(see [its ARCHITECTURE.md](../packages/widgets/src/language-learning/ARCHITECTURE.md))
-but predates the one-folder rule: its slice still sits under
-`apps/web/lib/language-learning/` with 17 route files until it is ported. The
-rule, the layout and the migration status are in
+provider adapters live in the widget. `language-learning` is the worked example of the layering
+(see [its ARCHITECTURE.md](../packages/widgets/src/language-learning/ARCHITECTURE.md)).
+The rule and the layout are in
 [widgets.md](widgets.md#where-a-widget-lives).
 
 ## Deliberate omissions

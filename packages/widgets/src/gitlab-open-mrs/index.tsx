@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { z } from "zod";
 import { Box, HStack, Link, Stack, Text, chakra } from "@chakra-ui/react";
 import { defineWidget, type WidgetComponentProps } from "@cockpit/widget-sdk";
+import {
+  configSchema,
+  defaultConfig,
+  type GitlabMrsConfig as Config,
+} from "./config";
 import { ConnectPrompt, ReconnectPrompt } from "../lib/connect";
-
-const configSchema = z.object({});
-type Config = z.infer<typeof configSchema>;
 
 type MrStatus = "approved" | "waiting" | "unknown";
 type MyReview = "none" | "approved" | "commented";
@@ -622,7 +623,7 @@ const gitlabOpenMrsWidget = defineWidget<Config, Data>({
   icon: () => <span aria-hidden>◆</span>,
   category: "source-control",
   configSchema,
-  defaultConfig: {},
+  defaultConfig,
   connection: {
     provider: "gitlab",
     label: "GitLab",
@@ -646,7 +647,7 @@ const gitlabOpenMrsWidget = defineWidget<Config, Data>({
     queryKey: (_config, profileId) => ["gitlab-open-mrs", profileId],
     queryFn: async (ctx) => {
       const res = await fetch(
-        `/api/gitlab/merge-requests${ctx.force ? "?refresh=1" : ""}`,
+        `/api/w/gitlab-open-mrs${ctx.force ? "?refresh=1" : ""}`,
         { signal: ctx.signal },
       );
       if (!res.ok) throw new Error(`Request failed (HTTP ${res.status})`);

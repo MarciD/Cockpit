@@ -8,12 +8,13 @@ widget — copy its layering.
 
 ## Where things live (and why the split)
 
-Cockpit widgets are client-only and fetch through `/api/*`; server logic lives in
-`apps/web`. So the bounded context is split across two places by the HTTP boundary:
+Everything the widget owns lives in this folder; the HTTP boundary runs
+through it rather than between packages (see
+[docs/widgets.md](../../../../docs/widgets.md#where-a-widget-lives)):
 
 ```
-apps/web/lib/language-learning/     ← the bounded context (server-only by convention:
-  domain/                             only /api/learn/* routes import it)
+server/                             ← the bounded context (server-only: the
+  domain/                             module starts with `import "server-only"`)
     category · language · vocabulary-item · exercise · grade
     exercise-generator · scoring · ports        PURE — no React/Next/Drizzle/Anthropic
   application/                        use cases; depend only on domain (ports)
@@ -25,24 +26,29 @@ apps/web/lib/language-learning/     ← the bounded context (server-only by conv
     csv-vocabulary-porter · anthropic-client
   composition.ts                      the ONLY place adapters are wired to services
 
-apps/web/app/api/learn/*/route.ts     thin nodejs handlers → application services
-apps/web/app/learn/[language]/page.tsx thin wrapper → the page component below
+  routes.ts + routes/                 thin handlers → application services,
+                                      mounted at /api/w/language-learning/*
+  index.ts                            the WidgetServerFactory the app builds
 
-packages/widgets/src/language-learning/   PRESENTATION ONLY (client)
+(client half, same folder)
   index.tsx                           defineWidget(...) — the dashboard tile
   ui/exercise-view · ui/score-strip   shared components (tile + page)
   ui/use-persistent-state             localStorage-backed useState (session resume)
   ui/session-error-boundary           catches render throws → Resume / Start over
-  page/full-page.tsx                  the full app (exported via a package subpath)
-  types.ts                            DTOs mirroring the /api/learn JSON contract
+  page/full-page.tsx                  the full app, mounted at /w/language-learning
+  types.ts                            DTOs mirroring the widget's JSON contract
 ```
 
 ## Dependency rule
 
 `domain` → (nothing) · `application` → `domain` · `infrastructure` → `domain` +
-external libs · `routes`/`ui` → everything below. The rule is enforced by
-structure + TypeScript + this doc (cockpit has no ESLint; see its `CLAUDE.md`).
+external libs · `routes`/`ui` → everything below. `server/index.ts` starts with
+`import "server-only"`, so a client file importing it fails the build; the rest
+holds by structure, TypeScript and this doc (cockpit has no ESLint).
 `domain/` must never import React, Next, Drizzle, or the Anthropic SDK.
+
+The app injects the two things a widget may not reach for itself: the database
+handle and the shared Anthropic credential (`server/index.ts`).
 
 ## Ports make the LLM and DB swappable
 
@@ -86,12 +92,11 @@ leaderboard.
 
 New domain: `topic`, `session`, `sentence-task`, `verb-lesson` (all pure). New
 services: `SessionService`, `VerbLessonService`. New adapters:
-`AnthropicTopicPlanner`, `DrizzleConjugationCache`. New routes: `/api/learn/
-session/{topics,topic,sentences}`, `/api/learn/verb/lesson`.
+`AnthropicTopicPlanner`, `DrizzleConjugationCache`. New routes: `session/{topics,topic,sentences}`, `verb/lesson`.
 
 ## Data flow example (answering one item)
 
-tile/page → `POST /api/learn/answer` → `PracticeService.submitAnswer` →
+tile/page → `POST /api/w/language-learning/answer` → `PracticeService.submitAnswer` →
 `VocabularyRepository.recordAnswer` + `SessionRepository.append` +
 `ScoreService.registerActivity` (applies the streak policy) → returns the day
 summary the UI renders.

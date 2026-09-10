@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { LanguageLearningPage } from "./language-learning/page/full-page";
 import { XdccWatchPage } from "./xdcc-watch/page/full-page";
 
 /** Props the generic `/w/[widget]` route hands a widget's full page. */
@@ -16,5 +17,6 @@ export interface WidgetPageProps {
  * `"use client"`.
  */
 export const pageRegistry: Record<string, ComponentType<WidgetPageProps>> = {
+  "language-learning": LanguageLearningPage,
   "xdcc-watch": XdccWatchPage,
 };

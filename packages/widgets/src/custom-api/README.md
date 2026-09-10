@@ -33,9 +33,10 @@ No badge, no desk context.
 
 3 × 5 by default, minimum 3 × 3, 4 rows on phones.
 
-## Where the code lives today
+## Where the code lives
 
-Everything is in `index.tsx` in this folder. Already in the one-folder shape.
+`index.tsx` and `config.ts` in this folder. No server code: the endpoint is
+fetched straight from the browser.
 
 ## Known limits
 

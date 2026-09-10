@@ -109,7 +109,7 @@ export function SessionRunner(props: SessionRunnerProps) {
 
   const recordAnswer = (itemId: string, correct: boolean) => {
     if (!itemId) return;
-    void fetch("/api/learn/answer", {
+    void fetch("/api/w/language-learning/answer", {
       method: "POST",
       headers: JSON_HEADERS,
       body: JSON.stringify({

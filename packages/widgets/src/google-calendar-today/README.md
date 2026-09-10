@@ -28,14 +28,14 @@ format".
 
 ## Data
 
-| What      | How                                                                                                                                                                   |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Reads     | `GET /api/calendar?view=day&tz=<browser tz>`; every 10 min, stale after 5 min, manual sync forces a refetch. Week and month views run their own query with `view=week | month`. |
-| Response  | `{ configured, calendars: [{ id, label, color, source }], items: [{ id, calendarId, title, start, end, allDay, videoUrl?, location? }], error? }`                     |
-| Calendars | `GET/POST /api/calendar/calendars`, `PATCH/DELETE /api/calendar/calendars/[id]`; URLs pass `assertPublicHttpUrl`                                                      |
-| Cache     | one `cachedFetch("calendar:<url>", …)` per calendar caching the raw ICS text for 10 min, in the `cache` table                                                         |
-| Adapter   | `packages/integrations/src/google-calendar.ts`: `node-ical` 0.20, RRULE expansion with EXDATE and overrides, video-link detection                                     |
-| Warm-up   | the scheduler fetches the day view at boot and every 5 min                                                                                                            |
+| What      | How                                                                                                                                                                                  |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Reads     | `GET /api/w/google-calendar-today?view=day&tz=<browser tz>`; every 10 min, stale after 5 min, manual sync forces a refetch. Week and month views run their own query with `view=week | month`. |
+| Response  | `{ configured, calendars: [{ id, label, color, source }], items: [{ id, calendarId, title, start, end, allDay, videoUrl?, location? }], error? }`                                    |
+| Calendars | `GET/POST /api/w/google-calendar-today/calendars`, `PATCH/DELETE /api/w/google-calendar-today/calendars/[id]`; URLs pass `assertPublicHttpUrl`                                       |
+| Cache     | one `cachedFetch("calendar:<url>", …)` per calendar caching the raw ICS text for 10 min, in the `cache` table                                                                        |
+| Adapter   | `packages/integrations/src/google-calendar.ts`: `node-ical` 0.20, RRULE expansion with EXDATE and overrides, video-link detection                                                    |
+| Warm-up   | the scheduler fetches the day view at boot and every 5 min                                                                                                                           |
 
 ## Assistant
 
@@ -47,19 +47,12 @@ format".
 
 3 × 6 by default, minimum 3 × 4, 7 rows on phones.
 
-## Where the code lives today
+## Where the code lives
 
-- Tile and settings: `index.tsx`, `settings.tsx` (this folder).
-- Routes: `apps/web/app/api/calendar/route.ts`,
-  `apps/web/app/api/calendar/calendars/route.ts`,
-  `apps/web/app/api/calendar/calendars/[id]/route.ts`.
-- Cache helper: `getCalendarEvents` in `apps/web/lib/integration-cache.ts`.
-- Calendar list storage: `listCalendars`, `addCalendar`, `updateCalendar`,
-  `deleteCalendar` in `apps/web/lib/credentials.ts`.
-- Adapter: `packages/integrations/src/google-calendar.ts`.
-
-Pending under the one-folder rule: adapter, routes and the calendar list
-helpers move into `server/`; the credential store itself stays shared.
+All of it is in this folder: `index.tsx` (tile), `settings.tsx`, `config.ts`
+and `server/` with the iCal adapter, the routes, the warm job and the
+assistant tool. The one thing the app keeps is the credential store that holds
+the feed URLs; it injects that store when the module is built.
 
 ## Known limits
 

@@ -23,12 +23,12 @@ None. The settings modal only offers Cancel / Save.
 
 ## Data
 
-| What   | How                                                                                                                             |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| Reads  | `GET /api/todos?profileId=…`; no interval, stale after 30 s, refetched after every change                                       |
-| Writes | `POST /api/todos { profileId, title }` · `PATCH /api/todos/[id] { done, title, startDate, endDate }` · `DELETE /api/todos/[id]` |
-| Table  | `todos` in `packages/db/src/schema.ts` (`id, profile_id, title, done, order, start_date, end_date, created_at, completed_at`)   |
-| Sync   | no manual sync button (no server cache to force)                                                                                |
+| What   | How                                                                                                                                |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Reads  | `GET /api/w/todo?profileId=…`; no interval, stale after 30 s, refetched after every change                                         |
+| Writes | `POST /api/w/todo { profileId, title }` · `PATCH /api/w/todo/[id] { done, title, startDate, endDate }` · `DELETE /api/w/todo/[id]` |
+| Table  | `todos` in `packages/db/src/schema.ts` (`id, profile_id, title, done, order, start_date, end_date, created_at, completed_at`)      |
+| Sync   | no manual sync button (no server cache to force)                                                                                   |
 
 ## Assistant
 
@@ -42,17 +42,11 @@ None. The settings modal only offers Cancel / Save.
 
 3 × 5 by default, minimum 3 × 3, 7 rows on phones.
 
-## Where the code lives today
+## Where the code lives
 
-- Tile: `index.tsx` (this folder).
-- Routes: `apps/web/app/api/todos/route.ts`,
-  `apps/web/app/api/todos/[id]/route.ts`.
-- Queries: `listTodos`, `createTodo`, `setTodo`, `deleteTodo` in
-  `packages/db/src/queries.ts`.
-
-Pending under the one-folder rule (`docs/widgets.md#where-a-widget-lives`):
-the two route files become `server/routes.ts`. The table stays in the core
-schema because desks own it.
+`index.tsx`, `config.ts` and `server/routes.ts` in this folder. The `todos`
+table stays in the core schema, because a desk owns its list and deleting a
+desk must cascade.
 
 ## Known limits
 

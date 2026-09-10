@@ -1,13 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, HStack, Input, Stack, Text, chakra } from "@chakra-ui/react";
 import { defineWidget, type WidgetComponentProps } from "@cockpit/widget-sdk";
-
-const configSchema = z.object({});
-type Config = z.infer<typeof configSchema>;
+import {
+  configSchema,
+  defaultConfig,
+  type TodoConfig as Config,
+} from "./config";
 
 interface Todo {
   id: string;
@@ -123,7 +124,7 @@ function Panel({ data }: WidgetComponentProps<Config, Data>) {
 
   async function add() {
     if (!title.trim()) return;
-    await fetch("/api/todos", {
+    await fetch("/api/w/todo", {
       method: "POST",
       headers: JSON_HEADERS,
       body: JSON.stringify({ profileId: data.profileId, title }),
@@ -133,7 +134,7 @@ function Panel({ data }: WidgetComponentProps<Config, Data>) {
   }
 
   async function toggle(id: string, done: boolean) {
-    await fetch(`/api/todos/${id}`, {
+    await fetch(`/api/w/todo/${id}`, {
       method: "PATCH",
       headers: JSON_HEADERS,
       body: JSON.stringify({ done }),
@@ -142,7 +143,7 @@ function Panel({ data }: WidgetComponentProps<Config, Data>) {
   }
 
   async function updateTitle(id: string, next: string) {
-    await fetch(`/api/todos/${id}`, {
+    await fetch(`/api/w/todo/${id}`, {
       method: "PATCH",
       headers: JSON_HEADERS,
       body: JSON.stringify({ title: next }),
@@ -154,7 +155,7 @@ function Panel({ data }: WidgetComponentProps<Config, Data>) {
     id: string,
     patch: { startDate?: string | null; endDate?: string | null },
   ) {
-    await fetch(`/api/todos/${id}`, {
+    await fetch(`/api/w/todo/${id}`, {
       method: "PATCH",
       headers: JSON_HEADERS,
       body: JSON.stringify(patch),
@@ -163,7 +164,7 @@ function Panel({ data }: WidgetComponentProps<Config, Data>) {
   }
 
   async function remove(id: string) {
-    await fetch(`/api/todos/${id}`, { method: "DELETE" });
+    await fetch(`/api/w/todo/${id}`, { method: "DELETE" });
     await refresh();
   }
 
@@ -406,13 +407,13 @@ const todoWidget = defineWidget<Config, Data>({
   icon: () => <span aria-hidden>☑</span>,
   category: "tasks",
   configSchema,
-  defaultConfig: {},
+  defaultConfig,
   layout: { defaultW: 3, defaultH: 5, minW: 3, minH: 3, mobileH: 7 },
   data: {
     queryKey: (_config, profileId) => ["todos", profileId],
     queryFn: async (ctx) => {
       const res = await fetch(
-        `/api/todos?profileId=${encodeURIComponent(ctx.profileId)}`,
+        `/api/w/todo?profileId=${encodeURIComponent(ctx.profileId)}`,
         { signal: ctx.signal },
       );
       if (!res.ok) throw new Error(`Request failed (HTTP ${res.status})`);

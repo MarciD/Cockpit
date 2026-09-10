@@ -101,20 +101,21 @@ Rules:
   server with scratch data, see its README), the widget alone on a desk, at 2×.
   Retake them when the widget's look changes.
 
-**Status (2026-09-10):** `xdcc-watch` is the first widget built this way and
-brought the glue with it: `packages/widgets/src/server/{contract,registry}.ts`,
+**Status (2026-09-10):** every widget is in this shape. The glue lives in
+`packages/widgets/src/server/{contract,registry}.ts`,
 `packages/widgets/src/pages.ts`, `apps/web/lib/widget-server.ts`,
 `apps/web/app/api/w/[widget]/[[...path]]/route.ts`,
-`apps/web/app/w/[widget]/page.tsx`, the scheduler hook and the drizzle-kit
-schema glob. Every widget has a README with screenshots. The other nine
-still keep server pieces in `packages/integrations`,
-`apps/web/lib/integration-cache.ts`, `apps/web/lib/credentials.ts`,
-`apps/web/lib/scheduler.ts` and `apps/web/app/api/*`; `language-learning` has
-its whole slice under `apps/web/lib/language-learning/` with 17 route files.
-A new widget follows the rule from the start; an existing one is ported when
-next touched. Never add to the old shape.
+`apps/web/app/w/[widget]/page.tsx`, the scheduler's `registerWidgetJobs`, and
+the drizzle-kit schema glob. `apps/web` no longer holds a single
+widget-specific route, adapter or job.
 
-Two things the glue makes non-obvious:
+Three things the app still owns on a widget's behalf, because they are
+cross-cutting: the credential store (a widget gets `getProviderConfig` and
+friends through `deps`, and the calendar widget gets its list store injected),
+the notification core, and the integration cache (`cachedFetch` for keyless
+sources, `throughCache` for credentialed ones).
+
+Four things the glue makes non-obvious:
 
 - **`pages.ts` must not be a `"use client"` module.** A server component
   importing one receives client-reference proxies, so the page lookup comes
@@ -124,6 +125,12 @@ Two things the glue makes non-obvious:
   and Next gives each route bundle its own module instances — so
   `widgetServerModules()` re-registers them on every call, and the kind
   registry lives on `globalThis`.
+- **Workspace packages are stricter than the app.** The shared tsconfig turns
+  on `noUncheckedIndexedAccess`, which `apps/web/tsconfig.json` does not, so
+  code moving into a widget usually needs a few index accesses guarded.
+- **A widget whose jobs depend on stored rows** declares `jobs` as a function
+  and calls `deps.reloadJobs()` after a change; each job is handed its own
+  `nextRunAt`, so the widget can store it without knowing about croner.
 
 ---
 

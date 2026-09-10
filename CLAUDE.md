@@ -25,14 +25,9 @@ contract + a worked example; `SECURITY.md` has the threat model.
   the widget; `packages/integrations` keeps only shared pieces. `apps/web`
   holds generic glue and cross-cutting services (notifications, images,
   credentials, integration cache, scheduler). Layout, rules and migration
-  status: `docs/widgets.md#where-a-widget-lives`. **Existing widgets predate
-  the rule** — their server pieces are still spread over
-  `packages/integrations`, `apps/web/lib` and `apps/web/app/api/*`
-  (`language-learning` has the whole slice under `apps/web/lib`). Port one when
-  you next touch it; never add a new widget in the old shape. The generic glue
-  (server registry, `/api/w/[widget]` route, scheduler hook, drizzle-kit glob)
-  does not exist yet and lands with the first server-side widget built under
-  the rule. LLM access = the shared `anthropic` API key via
+  status: `docs/widgets.md#where-a-widget-lives`. All eleven widgets are in this shape as of
+  2026-09-10; `apps/web` holds no widget-specific route, adapter or job any
+  more. Never add one in the old shape. LLM access = the shared `anthropic` API key via
   `getProviderConfig` (never the Claude subscription — Anthropic disallows
   programmatic subscription use).
 - **Widget server glue** (landed with `xdcc-watch`, 2026-09-10): a widget's
@@ -77,7 +72,7 @@ contract + a worked example; `SECURITY.md` has the threat model.
   `useSyncExternalStore`. Widgets don't emit manually — the host (`widget-card.tsx`)
   auto-publishes `widget:context` from a widget's `describe()`. Keep `index.ts`
   React-free (types only); runtime hooks live in `signals.tsx`.
-- **Assistant** (`apps/web/app/api/assistant/route.ts`): Anthropic SDK **Tool
+- **Assistant** (`packages/widgets/src/ai-assistant/server/`): Anthropic SDK **Tool
   Runner** with `stream: true`, read-only tools wrapping `integration-cache` + db
   reads. `profileId` is bound server-side (never model-chosen); no tool takes a
   free URL (SSRF); desk context + tool output are framed as untrusted DATA.
@@ -246,7 +241,3 @@ dedupeKey?, dedupeWindowMs? })` from `composition.ts` persists a row in
 - `chat_messages` / `usage_events` / `suggestions` tables exist but the assistant
   doesn't persist history yet, and the usage→widget-suggestion loop isn't built.
 - Global settings / global API keys are deferred (creds are per-widget for now).
-- **Widget layout migration.** All eleven widgets have a `README.md` +
-  `screenshots/`; only `xdcc-watch` is fully in the one-folder shape, the other
-  ten still keep server code outside their folder (see the rule above). Move
-  one when it is next touched.

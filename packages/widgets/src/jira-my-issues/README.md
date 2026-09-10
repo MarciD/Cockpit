@@ -26,7 +26,7 @@ entered together; the token is never echoed back.
 
 | What     | How                                                                                                                                                                           |
 | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Reads    | `GET /api/jira/my-issues`; every 5 min, stale after 60 s, manual sync forces a refetch                                                                                        |
+| Reads    | `GET /api/w/jira-my-issues`; every 5 min, stale after 60 s, manual sync forces a refetch                                                                                      |
 | Response | `{ configured, items?: [{ key, summary, status, url }], error?, authFailed? }`                                                                                                |
 | Cache    | `throughCache("jira", …)`, key `integration:jira`, 5-minute TTL, stale data served on failure                                                                                 |
 | Provider | `POST https://<site>/rest/api/3/search/jql` with Basic auth, JQL `assignee = currentUser() ORDER BY updated DESC`, 20 results; the site must be a bare host (regex-validated) |
@@ -42,16 +42,11 @@ entered together; the token is never echoed back.
 
 6 × 8 by default, minimum 4 × 5, 11 rows on phones.
 
-## Where the code lives today
+## Where the code lives
 
-- Tile: `index.tsx` (this folder).
-- Route: `apps/web/app/api/jira/my-issues/route.ts`.
-- Cache helper: `getJiraData` in `apps/web/lib/integration-cache.ts`; the
-  warm-up in `apps/web/lib/scheduler.ts`.
-- Adapter: `packages/integrations/src/jira.ts`.
-
-Pending under the one-folder rule: adapter, route and warm-up move into
-`server/`; the assistant tool becomes this widget's `assistantTools`.
+All of it is in this folder: `index.tsx` (tile), `config.ts` and `server/`
+with the Jira adapter, the route, the warm job and the assistant tool. The app
+only mounts it.
 
 ## Known limits
 

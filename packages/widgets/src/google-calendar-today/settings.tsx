@@ -36,7 +36,7 @@ export function CalendarSettings({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
 
   async function load() {
-    const res = await fetch("/api/calendar/calendars");
+    const res = await fetch("/api/w/google-calendar-today/calendars");
     if (res.ok) {
       const j = (await res.json()) as { calendars?: CalMeta[] };
       setCalendars(j.calendars ?? []);
@@ -55,7 +55,7 @@ export function CalendarSettings({ onClose }: { onClose: () => void }) {
   async function add() {
     if (!label.trim() || !url.trim() || busy) return;
     setBusy(true);
-    await fetch("/api/calendar/calendars", {
+    await fetch("/api/w/google-calendar-today/calendars", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ label: label.trim(), source, url: url.trim() }),
@@ -68,7 +68,9 @@ export function CalendarSettings({ onClose }: { onClose: () => void }) {
   }
 
   async function remove(id: string) {
-    await fetch(`/api/calendar/calendars/${id}`, { method: "DELETE" });
+    await fetch(`/api/w/google-calendar-today/calendars/${id}`, {
+      method: "DELETE",
+    });
     await load();
     refetchWidgets();
   }

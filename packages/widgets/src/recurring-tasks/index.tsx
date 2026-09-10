@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import { defineWidget, type WidgetComponentProps } from "@cockpit/widget-sdk";
-
-const configSchema = z.object({});
-type Config = z.infer<typeof configSchema>;
+import {
+  configSchema,
+  defaultConfig,
+  type RecurringTasksConfig as Config,
+} from "./config";
 
 interface Task {
   id: string;
@@ -43,7 +44,7 @@ function Panel({ data }: WidgetComponentProps<Config, Data>) {
 
   async function add() {
     if (!title.trim() || !cron.trim()) return;
-    await fetch("/api/tasks", {
+    await fetch("/api/w/recurring-tasks", {
       method: "POST",
       headers: JSON_HEADERS,
       body: JSON.stringify({ profileId: data.profileId, title, cron }),
@@ -53,7 +54,7 @@ function Panel({ data }: WidgetComponentProps<Config, Data>) {
   }
 
   async function toggle(id: string, enabled: boolean) {
-    await fetch(`/api/tasks/${id}`, {
+    await fetch(`/api/w/recurring-tasks/${id}`, {
       method: "PATCH",
       headers: JSON_HEADERS,
       body: JSON.stringify({ enabled }),
@@ -62,7 +63,7 @@ function Panel({ data }: WidgetComponentProps<Config, Data>) {
   }
 
   async function remove(id: string) {
-    await fetch(`/api/tasks/${id}`, { method: "DELETE" });
+    await fetch(`/api/w/recurring-tasks/${id}`, { method: "DELETE" });
     await refresh();
   }
 
@@ -155,13 +156,13 @@ const recurringTasksWidget = defineWidget<Config, Data>({
   icon: () => <span aria-hidden>↻</span>,
   category: "tasks",
   configSchema,
-  defaultConfig: {},
+  defaultConfig,
   layout: { defaultW: 3, defaultH: 5, minW: 3, minH: 3, mobileH: 7 },
   data: {
     queryKey: (_config, profileId) => ["recurring-tasks", profileId],
     queryFn: async (ctx) => {
       const res = await fetch(
-        `/api/tasks?profileId=${encodeURIComponent(ctx.profileId)}`,
+        `/api/w/recurring-tasks?profileId=${encodeURIComponent(ctx.profileId)}`,
         { signal: ctx.signal },
       );
       if (!res.ok) throw new Error(`Request failed (HTTP ${res.status})`);

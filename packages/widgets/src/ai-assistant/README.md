@@ -35,7 +35,7 @@ It must be an API key; programmatic use of a Claude subscription is not allowed.
 | What   | How                                                                                                                                                            |
 | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Query  | none; the widget only carries `profileId`. No refetch, no sync button.                                                                                         |
-| Chat   | `POST /api/assistant { messages, profileId, context?, model, systemNote }` → `text/plain` stream                                                               |
+| Chat   | `POST /api/w/ai-assistant { messages, profileId, context?, model, systemNote }` → `text/plain` stream                                                          |
 | Server | Anthropic SDK Tool Runner, `max_tokens 2048`, up to 6 tool iterations, stable system prompt cached with `cache_control`, desk context framed as untrusted data |
 | Errors | missing key → `400 { error: "needs-connect" }` and the tile shows the Connect prompt; other failures are appended to the reply as `[assistant error: …]`       |
 
@@ -48,18 +48,12 @@ nothing itself.
 
 4 × 8 by default, minimum 3 × 5, 11 rows on phones.
 
-## Where the code lives today
+## Where the code lives
 
-- Tile: `index.tsx` (this folder).
-- Route, tools and system prompt: `apps/web/app/api/assistant/route.ts`
-  (260 lines).
-- Tool data: `getGitlabData`, `getJiraData`, `getCalendarData`,
-  `getWeatherData` in `apps/web/lib/integration-cache.ts`; `listTodos`,
-  `listRecurringTasks` in `packages/db`.
-
-Pending under the one-folder rule: the route and prompt move to `server/`;
-tools are contributed by the widgets that own the data (`assistantTools`
-exports collected from the server registry).
+`index.tsx`, `config.ts` and `server/` in this folder, including the system
+prompt and the streaming route. Every tool except the inbox one is contributed
+by the widget that owns that data and collected through `deps.assistantTools()`,
+so this widget knows nothing about GitLab, Jira or calendars.
 
 ## Known limits
 

@@ -14,7 +14,7 @@ explained in [ARCHITECTURE.md](ARCHITECTURE.md).
   and one exercise at a time: flashcard, multiple choice or cloze, with an
   offline hint, a Claude hint on request, and browser speech for the target
   language. `Open full app →` leads to the page.
-- **Full app** at `/learn/<language>?profile=<desk>&native=<language>`
+- **Full app** at `/w/language-learning?profile=<desk>&language=<language>&native=<language>`
   with five tabs: `Sessions` (topic-based lessons planned by Claude, resumable
   after a reload), `Practice` (batches of eight, plus Claude-graded sentence
   writing), `Browse` (add, edit, delete items), `Verbs` (guided conjugation
@@ -40,13 +40,13 @@ offline.
 
 ## Data
 
-| What   | How                                                                                                                                                                                                                 |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tile   | `GET /api/learn/score?…&today=&goal=` and `GET /api/learn/items?…` in parallel; stale after 15 s; sync button on; then `GET /api/learn/next?count=1&mode=general`, `POST /api/learn/hint`, `POST /api/learn/answer` |
-| App    | 17 routes under `apps/web/app/api/learn/*`: items, next, score, answer, hint, grade, generate, conjugate, import, export, `session/{topics,topic,sentences}`, `verb/lesson`                                         |
-| Tables | `vocab_items`, `learning_score`, `learning_sessions`, `conjugations`                                                                                                                                                |
-| LLM    | `structuredCall` (forced tool use) with tiers: hints and grading `fast`, item generation and topic planning `balanced`                                                                                              |
-| CSV    | columns `category,<language>,<native>,notes`; `,` or `;` delimited; duplicates skipped so progress is never wiped                                                                                                   |
+| What   | How                                                                                                                                                                                                                                                                                       |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tile   | `GET /api/w/language-learning/score?…&today=&goal=` and `GET /api/w/language-learning/items?…` in parallel; stale after 15 s; sync button on; then `GET /api/w/language-learning/next?count=1&mode=general`, `POST /api/w/language-learning/hint`, `POST /api/w/language-learning/answer` |
+| App    | 17 routes under `apps/web/app/api/w/language-learning/*`: items, next, score, answer, hint, grade, generate, conjugate, import, export, `session/{topics,topic,sentences}`, `verb/lesson`                                                                                                 |
+| Tables | `vocab_items`, `learning_score`, `learning_sessions`, `conjugations`                                                                                                                                                                                                                      |
+| LLM    | `structuredCall` (forced tool use) with tiers: hints and grading `fast`, item generation and topic planning `balanced`                                                                                                                                                                    |
+| CSV    | columns `category,<language>,<native>,notes`; `,` or `;` delimited; duplicates skipped so progress is never wiped                                                                                                                                                                         |
 
 ## Assistant
 
@@ -58,16 +58,13 @@ offline.
 
 3 × 6 by default, minimum 3 × 4, 5 rows on phones.
 
-## Where the code lives today
+## Where the code lives
 
-- Tile, UI and page: this folder (`index.tsx`, `ui/`, `page/full-page.tsx`,
-  exported on the `@cockpit/widgets/language-learning/page` subpath).
-- Page route: `apps/web/app/learn/[language]/page.tsx`.
-- Domain slice: `apps/web/lib/language-learning/{domain,application,infrastructure,composition.ts}`.
-- Routes: `apps/web/app/api/learn/**` (17 files).
-
-Pending under the one-folder rule: the slice becomes `server/`, the 17 route
-files one `server/routes.ts`, and this README absorbs `ARCHITECTURE.md`.
+All of it is in this folder: `index.tsx` (tile), `types.ts`, `ui/`,
+`page/full-page.tsx`, and `server/` with the layered slice (`domain/`,
+`application/`, `infrastructure/`, `composition.ts`) plus one `routes.ts` that
+maps the seventeen endpoints. The app injects the database handle and the
+shared Anthropic credential; nothing else.
 
 ## Known limits
 

@@ -26,7 +26,7 @@ Keyless, so it works on a fresh install without any connection.
 
 | What     | How                                                                                                                                                                                      |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Reads    | `GET /api/weather?lat=&lon=&label=`; every 30 min, stale after 10 min, manual sync forces a refetch                                                                                      |
+| Reads    | `GET /api/w/weather?lat=&lon=&label=`; every 30 min, stale after 10 min, manual sync forces a refetch                                                                                    |
 | Response | `{ configured, items?: { label, tempC, code, condition, highC, lowC, hourly: [{ time, tempC }] }, error? }`                                                                              |
 | Cache    | `cachedFetch("weather:<lat>,<lon>", …)` with a 30-minute TTL in the `cache` table                                                                                                        |
 | Provider | `https://api.open-meteo.com/v1/forecast` (current temperature and weather code, daily max/min, hourly temperature, `timezone=auto`, one day); no key, fixed host, no client-supplied URL |
@@ -41,14 +41,11 @@ Keyless, so it works on a fresh install without any connection.
 
 3 × 5 by default, minimum 3 × 3, 5 rows on phones.
 
-## Where the code lives today
+## Where the code lives
 
-- Tile: `index.tsx` (this folder).
-- Route: `apps/web/app/api/weather/route.ts`.
-- Cache helper: `getWeatherData` in `apps/web/lib/integration-cache.ts`.
-- Adapter: `packages/integrations/src/open-meteo.ts`.
-
-Pending under the one-folder rule: adapter and route move into `server/`.
+All of it is in this folder: `index.tsx` (tile), `config.ts`, `types.ts` and
+`server/` with the Open-Meteo adapter, the route and the assistant tool. The
+app only mounts it.
 
 ## Known limits
 

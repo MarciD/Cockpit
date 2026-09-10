@@ -1,15 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { Box, HStack, Link, Stack, Text, chakra } from "@chakra-ui/react";
 import { defineWidget, type WidgetComponentProps } from "@cockpit/widget-sdk";
+import {
+  configSchema,
+  defaultConfig,
+  type CalendarConfig as Config,
+} from "./config";
 import { ConnectPrompt } from "../lib/connect";
 import { CalendarSettings } from "./settings";
-
-const configSchema = z.object({});
-type Config = z.infer<typeof configSchema>;
 
 interface CalEvent {
   id: string;
@@ -123,7 +124,7 @@ function Panel({ data, onOpenSettings }: WidgetComponentProps<Config, Data>) {
     queryKey: ["calendar-view", view, tz],
     queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/calendar?view=${view}&tz=${encodeURIComponent(tz)}`,
+        `/api/w/google-calendar-today?view=${view}&tz=${encodeURIComponent(tz)}`,
         { signal },
       );
       if (!res.ok) throw new Error(`Request failed (HTTP ${res.status})`);
@@ -285,7 +286,7 @@ const googleCalendarTodayWidget = defineWidget<Config, Data>({
   icon: () => <span aria-hidden>◷</span>,
   category: "calendar",
   configSchema,
-  defaultConfig: {},
+  defaultConfig,
   SettingsComponent: CalendarSettings,
   layout: { defaultW: 3, defaultH: 6, minW: 3, minH: 4, mobileH: 7 },
   data: {
@@ -293,7 +294,7 @@ const googleCalendarTodayWidget = defineWidget<Config, Data>({
     queryFn: async (ctx) => {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const res = await fetch(
-        `/api/calendar?view=day&tz=${encodeURIComponent(tz)}${ctx.force ? "&refresh=1" : ""}`,
+        `/api/w/google-calendar-today?view=day&tz=${encodeURIComponent(tz)}${ctx.force ? "&refresh=1" : ""}`,
         { signal: ctx.signal },
       );
       if (!res.ok) throw new Error(`Request failed (HTTP ${res.status})`);

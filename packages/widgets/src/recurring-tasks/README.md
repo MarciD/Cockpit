@@ -24,8 +24,8 @@ None.
 
 | What   | How                                                                                                                                                                                       |
 | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Reads  | `GET /api/tasks?profileId=…`; no interval, stale after 30 s                                                                                                                               |
-| Writes | `POST /api/tasks { profileId, title, cron }` · `PATCH /api/tasks/[id] { enabled, title, cron }` · `DELETE /api/tasks/[id]`                                                                |
+| Reads  | `GET /api/w/recurring-tasks?profileId=…`; no interval, stale after 30 s                                                                                                                   |
+| Writes | `POST /api/w/recurring-tasks { profileId, title, cron }` · `PATCH /api/w/recurring-tasks/[id] { enabled, title, cron }` · `DELETE /api/w/recurring-tasks/[id]`                            |
 | Table  | `recurring_tasks` (`id, profile_id, title, cron, next_run_at, enabled`)                                                                                                                   |
 | Jobs   | `reloadRecurringTasks()` in `apps/web/lib/scheduler.ts` re-registers every enabled task as `new Cron(cron, { name: "task:<id>", protect: true, catch: onJobError }, …)` after each change |
 
@@ -44,18 +44,12 @@ None.
 
 3 × 5 by default, minimum 3 × 3, 7 rows on phones.
 
-## Where the code lives today
+## Where the code lives
 
-- Tile: `index.tsx` (this folder).
-- Routes: `apps/web/app/api/tasks/route.ts`,
-  `apps/web/app/api/tasks/[id]/route.ts`.
-- Scheduler: `reloadRecurringTasks` in `apps/web/lib/scheduler.ts`.
-- Queries: `listRecurringTasks`, `listEnabledRecurringTasks`,
-  `createRecurringTask`, `updateRecurringTask`, `deleteRecurringTask`.
-
-Pending under the one-folder rule: routes become `server/routes.ts`, the
-per-task job registration becomes `server/jobs.ts`, and the scheduler keeps
-only the generic hook.
+`index.tsx`, `config.ts` and `server/` in this folder. The jobs are declared
+as a function, so adding or editing a task calls `deps.reloadJobs()` and the
+scheduler re-registers them; each job is told its own next run, which is what
+the tile shows.
 
 ## Known limits
 

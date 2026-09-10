@@ -1,19 +1,16 @@
-import { z } from "zod";
 import { Stack, Text } from "@chakra-ui/react";
 import { defineWidget, type WidgetComponentProps } from "@cockpit/widget-sdk";
+import {
+  configSchema,
+  defaultConfig,
+  type CustomApiConfig as Config,
+} from "./config";
 
 /**
  * Config-only, zero-code widget (Homepage-style): point it at a JSON endpoint
  * that returns `{ items: [{ id, label, hint? }] }` and it lists them. Proves the
  * whole pattern — manifest + Zod config + data query + component + states.
  */
-// Defaults live in `defaultConfig` (below), not the schema — the schema just
-// validates, keeping its input and output types identical to TConfig.
-const configSchema = z.object({
-  title: z.string(),
-  endpoint: z.string(),
-});
-type Config = z.infer<typeof configSchema>;
 
 interface CustomApiData {
   items: Array<{ id: string; label: string; hint?: string }>;
@@ -44,7 +41,7 @@ const customApiWidget = defineWidget<Config, CustomApiData>({
   icon: () => <span aria-hidden>▦</span>,
   category: "custom",
   configSchema,
-  defaultConfig: { title: "Custom API", endpoint: "/api/demo" },
+  defaultConfig,
   layout: { defaultW: 3, defaultH: 5, minW: 3, minH: 3, mobileH: 4 },
   data: {
     queryKey: (config, profileId) => ["custom-api", profileId, config.endpoint],

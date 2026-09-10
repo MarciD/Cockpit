@@ -243,7 +243,7 @@ export function SentenceTaskView(props: SentenceTaskViewProps) {
             onClick={async () => {
               setGrading(true);
               try {
-                const res = await fetch("/api/learn/grade", {
+                const res = await fetch("/api/w/language-learning/grade", {
                   method: "POST",
                   headers: JSON_HEADERS,
                   body: JSON.stringify({

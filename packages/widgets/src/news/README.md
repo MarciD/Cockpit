@@ -24,7 +24,7 @@ Headlines from your RSS and Atom feeds, newest first, merged across feeds.
 
 | What     | How                                                                                                                            |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Reads    | `GET /api/news?feed=…&feed=…&limit=`; every 10 min, stale after 5 min, manual sync forces a refetch                            |
+| Reads    | `GET /api/w/news?feed=…&feed=…&limit=`; every 10 min, stale after 5 min, manual sync forces a refetch                          |
 | Response | `{ configured, items?: [{ id, title, link, source, publishedAt }], error? }`                                                   |
 | Cache    | `cachedFetch("news:<sorted feeds>:<limit>", …)` with a 10-minute TTL in the `cache` table                                      |
 | Provider | each feed is fetched server-side after `assertPublicHttpUrl`, capped at 2 MB, parsed with `fast-xml-parser` (RSS 2.0 and Atom) |
@@ -38,14 +38,10 @@ Headlines from your RSS and Atom feeds, newest first, merged across feeds.
 
 3 × 5 by default, minimum 3 × 3, 6 rows on phones.
 
-## Where the code lives today
+## Where the code lives
 
-- Tile: `index.tsx` (this folder).
-- Route: `apps/web/app/api/news/route.ts`.
-- Cache helper: `getNewsData` in `apps/web/lib/integration-cache.ts`.
-- Adapter: `packages/integrations/src/rss.ts`.
-
-Pending under the one-folder rule: adapter and route move into `server/`.
+All of it is in this folder: `index.tsx` (tile), `config.ts`, `types.ts` and
+`server/` with the feed adapter and the route. The app only mounts it.
 
 ## Known limits
 

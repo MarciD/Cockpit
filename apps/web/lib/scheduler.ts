@@ -1,21 +1,15 @@
 import { Cron, type CatchCallbackFn } from "croner";
-import { listEnabledRecurringTasks, updateRecurringTask } from "@cockpit/db";
-import { getDb } from "./db";
-import {
-  getCalendarData,
-  getGitlabData,
-  getJiraData,
-} from "./integration-cache";
+import { resolveJobs } from "@cockpit/widgets/server/contract";
 import { notificationServices, notify } from "./notifications/composition";
+import { setWidgetJobReloader } from "./widget-jobs";
 import { widgetServerModules } from "./widget-server";
 
 interface SchedulerState {
   started: boolean;
-  refreshJob: Cron | null;
-  pruneJob: Cron | null;
   remindersJob: Cron | null;
-  widgetJobs: Cron[];
-  taskJobs: Map<string, Cron>;
+  pruneJob: Cron | null;
+  /** Per widget, so one widget's jobs can be rebuilt without touching the rest. */
+  widgetJobs: Map<string, Cron[]>;
 }
 
 /** A failing job notifies at most once an hour, so a flapping job cannot flood the inbox. */
@@ -27,20 +21,10 @@ const globalForScheduler = globalThis as unknown as {
 };
 const state: SchedulerState = (globalForScheduler.cockpitScheduler ??= {
   started: false,
-  refreshJob: null,
-  pruneJob: null,
   remindersJob: null,
-  widgetJobs: [],
-  taskJobs: new Map(),
+  pruneJob: null,
+  widgetJobs: new Map(),
 });
-
-async function refreshAll(): Promise<void> {
-  await Promise.allSettled([
-    getGitlabData(true),
-    getJiraData(true),
-    getCalendarData(),
-  ]);
-}
 
 /**
  * croner's `catch` option defaults to `false`, and that default is dangerous
@@ -70,38 +54,34 @@ const onJobError: CatchCallbackFn = (err, job) => {
   });
 };
 
-/** (Re)register a croner job per enabled recurring task; refresh next-run. */
-export function reloadRecurringTasks(): void {
-  for (const job of state.taskJobs.values()) job.stop();
-  state.taskJobs.clear();
+/**
+ * (Re)register one widget's jobs. A widget whose jobs depend on stored rows
+ * (recurring tasks) declares `jobs` as a function and calls `deps.reloadJobs()`
+ * after a change, which lands here.
+ */
+export function registerWidgetJobs(widgetId: string): void {
+  for (const job of state.widgetJobs.get(widgetId) ?? []) job.stop();
+  state.widgetJobs.delete(widgetId);
 
-  const db = getDb();
-  for (const task of listEnabledRecurringTasks(db)) {
+  const mod = widgetServerModules()[widgetId];
+  if (!mod) return;
+
+  const running: Cron[] = [];
+  for (const job of resolveJobs(mod)) {
     try {
-      const job = new Cron(
-        task.cron,
-        { name: `task:${task.id}`, protect: true, catch: onJobError },
-        async () => {
-          const next = state.taskJobs.get(task.id)?.nextRun() ?? null;
-          updateRecurringTask(getDb(), task.id, { nextRunAt: next });
-          // The task firing is the notification; the row deep-links to its desk.
-          await notify({
-            kind: "tasks.due",
-            severity: "action",
-            profileId: task.profileId,
-            title: task.title,
-            body: `Recurring task · ${task.cron}`,
-            url: `/${task.profileId}`,
-            data: { source: "recurring", taskId: task.id },
-          });
-        },
+      // Annotated because the callback closes over `cron` itself.
+      const cron: Cron = new Cron(
+        job.cron,
+        { name: `${widgetId}:${job.name}`, protect: true, catch: onJobError },
+        () => job.run({ nextRunAt: cron.nextRun() }),
       );
-      state.taskJobs.set(task.id, job);
-      updateRecurringTask(db, task.id, { nextRunAt: job.nextRun() ?? null });
+      job.onSchedule?.({ nextRunAt: cron.nextRun() });
+      running.push(cron);
     } catch {
-      // invalid cron expression — skip this task
+      // An invalid cron expression is the widget's problem, not the server's.
     }
   }
+  state.widgetJobs.set(widgetId, running);
 }
 
 /** Started once from instrumentation.ts (Node runtime only). */
@@ -109,15 +89,7 @@ export function startScheduler(): void {
   if (state.started) return;
   state.started = true;
 
-  // Warm the integration caches now, then every 5 minutes — fires even with
-  // the browser closed, as long as the server (launchd agent) is running.
-  state.refreshJob = new Cron(
-    "*/5 * * * *",
-    { name: "refresh", protect: true, catch: onJobError },
-    refreshAll,
-  );
-  // Outside croner, so the `catch` above does not cover it.
-  void refreshAll().catch((err) => reportJobFailure("refresh (warm-up)", err));
+  setWidgetJobReloader(registerWidgetJobs);
 
   // Reminders: anything due fires within the minute, and once at boot so a
   // restart at 17:29 does not swallow a 17:30 reminder.
@@ -142,19 +114,10 @@ export function startScheduler(): void {
     },
   );
 
-  // Every widget's jobs, from its server module (one-folder rule).
-  for (const mod of Object.values(widgetServerModules())) {
-    for (const job of mod.jobs ?? []) {
-      state.widgetJobs.push(
-        new Cron(
-          job.cron,
-          { name: `${mod.id}:${job.name}`, protect: true, catch: onJobError },
-          job.run,
-        ),
-      );
-    }
+  // Every widget's own jobs — warm-ups, watches, per-row reminders.
+  for (const widgetId of Object.keys(widgetServerModules())) {
+    registerWidgetJobs(widgetId);
   }
 
-  reloadRecurringTasks();
   process.stdout.write("[cockpit] scheduler started\n");
 }
