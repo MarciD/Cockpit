@@ -254,3 +254,54 @@ export const notifications = sqliteTable(
     index("notifications_created_idx").on(t.createdAt),
   ],
 );
+
+/** Which delivery channels a notification kind fans out to; `*` is the default row. */
+export const notificationPreferences = sqliteTable("notification_preferences", {
+  kind: text("kind").primaryKey(),
+  channelsJson: text("channels_json", { mode: "json" }).notNull(), // ChannelId[]
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(now),
+});
+
+/** Single-row global notification settings (id is always 'default'). */
+export const notificationSettings = sqliteTable("notification_settings", {
+  id: text("id").primaryKey(),
+  quietFrom: text("quiet_from"), // 'HH:MM' or null
+  quietTo: text("quiet_to"),
+  publicUrl: text("public_url"), // how the phone reaches cockpit, e.g. https://mac.tailnet.ts.net
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(now),
+});
+
+/** One row per channel attempt, so the settings panel can show what last happened. */
+export const notificationDeliveries = sqliteTable(
+  "notification_deliveries",
+  {
+    id: text("id").primaryKey(),
+    notificationId: text("notification_id")
+      .notNull()
+      .references(() => notifications.id, { onDelete: "cascade" }),
+    channel: text("channel").notNull(),
+    status: text("status").notNull(), // 'sent' | 'failed' | 'skipped'
+    error: text("error"),
+    at: integer("at", { mode: "timestamp" }).notNull().default(now),
+  },
+  (t) => [index("notification_deliveries_channel_idx").on(t.channel, t.at)],
+);
+
+/** A notification to raise later; a minute-cron drains due rows into notify(). */
+export const scheduledNotifications = sqliteTable(
+  "scheduled_notifications",
+  {
+    id: text("id").primaryKey(),
+    fireAt: integer("fire_at", { mode: "timestamp" }).notNull(),
+    payloadJson: text("payload_json", { mode: "json" }).notNull(), // NotificationInput
+    firedAt: integer("fired_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(now),
+  },
+  (t) => [index("scheduled_notifications_fire_idx").on(t.fireAt)],
+);

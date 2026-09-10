@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, gte, isNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, isNull, lt, lte, sql } from "drizzle-orm";
 import type { CockpitDb } from "./index";
 import {
   cache,
@@ -6,8 +6,12 @@ import {
   layouts,
   learningScore,
   learningSessions,
+  notificationDeliveries,
+  notificationPreferences,
+  notificationSettings,
   notifications,
   profiles,
+  scheduledNotifications,
   recurringTasks,
   todos,
   usageEvents,
@@ -595,5 +599,153 @@ export function pruneNotifications(db: CockpitDb, before: Date): number {
       ),
     )
     .returning({ id: notifications.id })
+    .all().length;
+}
+
+// --- notification preferences, settings, deliveries, reminders -------------
+
+export function listNotificationPreferences(db: CockpitDb) {
+  return db.select().from(notificationPreferences).all();
+}
+
+export function upsertNotificationPreference(
+  db: CockpitDb,
+  kind: string,
+  channels: string[],
+) {
+  const updatedAt = new Date();
+  db.insert(notificationPreferences)
+    .values({ kind, channelsJson: channels, updatedAt })
+    .onConflictDoUpdate({
+      target: notificationPreferences.kind,
+      set: { channelsJson: channels, updatedAt },
+    })
+    .run();
+}
+
+export function deleteNotificationPreference(db: CockpitDb, kind: string) {
+  db.delete(notificationPreferences)
+    .where(eq(notificationPreferences.kind, kind))
+    .run();
+}
+
+const SETTINGS_ROW_ID = "default";
+
+export function getNotificationSettings(db: CockpitDb) {
+  return db
+    .select()
+    .from(notificationSettings)
+    .where(eq(notificationSettings.id, SETTINGS_ROW_ID))
+    .get();
+}
+
+export function upsertNotificationSettings(
+  db: CockpitDb,
+  value: {
+    quietFrom: string | null;
+    quietTo: string | null;
+    publicUrl: string | null;
+  },
+) {
+  const updatedAt = new Date();
+  db.insert(notificationSettings)
+    .values({ id: SETTINGS_ROW_ID, ...value, updatedAt })
+    .onConflictDoUpdate({
+      target: notificationSettings.id,
+      set: { ...value, updatedAt },
+    })
+    .run();
+}
+
+export type NotificationDeliveryRow =
+  typeof notificationDeliveries.$inferSelect;
+
+export function recordNotificationDelivery(
+  db: CockpitDb,
+  value: typeof notificationDeliveries.$inferInsert,
+) {
+  db.insert(notificationDeliveries).values(value).run();
+}
+
+/** The most recent attempt on one channel. */
+export function latestNotificationDelivery(
+  db: CockpitDb,
+  channel: string,
+): NotificationDeliveryRow | undefined {
+  return db
+    .select()
+    .from(notificationDeliveries)
+    .where(eq(notificationDeliveries.channel, channel))
+    .orderBy(desc(notificationDeliveries.at))
+    .limit(1)
+    .get();
+}
+
+export type ScheduledNotificationRow =
+  typeof scheduledNotifications.$inferSelect;
+
+export function insertScheduledNotification(
+  db: CockpitDb,
+  value: typeof scheduledNotifications.$inferInsert,
+): ScheduledNotificationRow {
+  return db.insert(scheduledNotifications).values(value).returning().get();
+}
+
+/** Unfired rows whose time has come, oldest first. */
+export function listDueScheduledNotifications(
+  db: CockpitDb,
+  now: Date,
+  limit = 100,
+): ScheduledNotificationRow[] {
+  return db
+    .select()
+    .from(scheduledNotifications)
+    .where(
+      and(
+        isNull(scheduledNotifications.firedAt),
+        lte(scheduledNotifications.fireAt, now),
+      ),
+    )
+    .orderBy(scheduledNotifications.fireAt)
+    .limit(limit)
+    .all();
+}
+
+export function markScheduledNotificationFired(
+  db: CockpitDb,
+  id: string,
+  at: Date,
+) {
+  db.update(scheduledNotifications)
+    .set({ firedAt: at })
+    .where(eq(scheduledNotifications.id, id))
+    .run();
+}
+
+export function cancelScheduledNotification(db: CockpitDb, id: string) {
+  db.delete(scheduledNotifications)
+    .where(
+      and(
+        eq(scheduledNotifications.id, id),
+        isNull(scheduledNotifications.firedAt),
+      ),
+    )
+    .run();
+}
+
+/** Fired rows older than `before` are history nobody reads; drop them. */
+export function pruneScheduledNotifications(
+  db: CockpitDb,
+  before: Date,
+): number {
+  return db
+    .delete(scheduledNotifications)
+    .where(
+      and(
+        lt(scheduledNotifications.fireAt, before),
+        sql`${scheduledNotifications.firedAt} is not null`,
+      ),
+    )
+    .returning({ id: scheduledNotifications.id })
     .all().length;
 }

@@ -118,12 +118,23 @@ reported once, not every five minutes.
 
 Producers live where the knowledge is: a recurring task firing in the
 scheduler, an `IntegrationAuthError` in `throughCache`, croner's `catch`
-callback. The browser learns about new rows by polling `GET /api/notifications`
-every 30 seconds from the bell in the rail (one shared TanStack query); rows
-newer than the last poll become toasts, the unread count goes onto the
-installed app's badge, and the inbox opens as the ordinary modal in a portal.
-No SSE and no web push: the inbox has to be persisted anyway, and polling an
-inbox is the whole cost.
+callback, and `scheduleNotification(fireAt, input)` for anything that should
+arrive later (a minute-cron drains due rows, once at boot too). The browser
+learns about new rows by polling `GET /api/notifications` every 30 seconds from
+the bell in the rail (one shared TanStack query); rows newer than the last poll
+become toasts, the unread count goes onto the installed app's badge, and the
+inbox opens as the ordinary modal in a portal. No SSE and no web push: the
+inbox has to be persisted anyway, and polling an inbox is the whole cost.
+
+Beyond the inbox there are two channels, routed per kind by a small matrix the
+settings panel edits, held back during quiet hours, and each attempt logged so
+the panel can say what last happened. `desktop` shells out to
+terminal-notifier — only meaningful on the Mac the launchd agent runs on, and
+chosen over `osascript`, whose banners are attributed to Script Editor and open
+nothing. `phone` publishes one JSON message to ntfy (ntfy.sh or self-hosted);
+the topic and optional token live in the credential store under provider
+`ntfy`, and a tap opens cockpit at the public URL you configure, which is the
+one thing the phone must be able to reach.
 
 ## The signal bus
 

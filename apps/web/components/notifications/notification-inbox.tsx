@@ -9,6 +9,7 @@ import { useNotifications } from "./use-notifications";
 interface NotificationInboxProps {
   open: boolean;
   onClose: () => void;
+  onOpenSettings: () => void;
 }
 
 const DOT_COLOR: Record<Severity, string> = {
@@ -65,7 +66,11 @@ function groupByDay(items: NotificationDto[], now: Date) {
   return groups;
 }
 
-export function NotificationInbox({ open, onClose }: NotificationInboxProps) {
+export function NotificationInbox({
+  open,
+  onClose,
+  onOpenSettings,
+}: NotificationInboxProps) {
   const router = useRouter();
   const {
     items,
@@ -205,6 +210,16 @@ export function NotificationInbox({ open, onClose }: NotificationInboxProps) {
               _hover={{ color: "link.hover" }}
             >
               send a test
+            </chakra.button>
+            <chakra.button
+              type="button"
+              onClick={onOpenSettings}
+              textStyle="label"
+              color="link"
+              cursor="pointer"
+              _hover={{ color: "link.hover" }}
+            >
+              settings
             </chakra.button>
           </Flex>
           <Text textStyle="meta">

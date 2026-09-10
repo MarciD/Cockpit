@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Box, Portal, chakra } from "@chakra-ui/react";
 import { NotificationInbox } from "./notification-inbox";
+import { NotificationSettings } from "./notification-settings";
 import { useNotifications } from "./use-notifications";
 
 interface NotificationBellProps {
@@ -12,7 +13,7 @@ interface NotificationBellProps {
 
 /** The raised bell with an unread pill; opens the inbox modal. */
 export function NotificationBell({ size = 40 }: NotificationBellProps) {
-  const [open, setOpen] = useState(false);
+  const [view, setView] = useState<"inbox" | "settings" | null>(null);
   const { unread } = useNotifications();
   const label =
     unread > 0
@@ -25,7 +26,7 @@ export function NotificationBell({ size = 40 }: NotificationBellProps) {
         type="button"
         aria-label={label}
         title={label}
-        onClick={() => setOpen(true)}
+        onClick={() => setView("inbox")}
         layerStyle="raised"
         boxSize={`${size}px`}
         borderRadius="full"
@@ -76,7 +77,15 @@ export function NotificationBell({ size = 40 }: NotificationBellProps) {
       {/* Portalled: the rail and tab bar use backdrop-filter, which would turn
           the modal's fixed positioning into a 72px-wide box. */}
       <Portal>
-        <NotificationInbox open={open} onClose={() => setOpen(false)} />
+        <NotificationInbox
+          open={view === "inbox"}
+          onClose={() => setView(null)}
+          onOpenSettings={() => setView("settings")}
+        />
+        <NotificationSettings
+          open={view === "settings"}
+          onClose={() => setView(null)}
+        />
       </Portal>
     </>
   );

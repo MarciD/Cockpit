@@ -82,18 +82,27 @@ contract + a worked example; `SECURITY.md` has the threat model.
 - **Notifications** (`apps/web/lib/notifications`, layered like a widget slice):
   server-side `notify({ kind, title, body?, url?, severity?, profileId?,
 dedupeKey?, dedupeWindowMs? })` from `composition.ts` persists a row in
-  `notifications` and fans out to channels (none yet — phone/desktop are phase
-  1). It never throws. Kinds are `source.event` (`tasks.due`,
-  `integration.auth-failed`, `scheduler.job-failed`, `system.test`); `url` must
-  be a same-origin path. Producers: recurring tasks firing (`scheduler.ts`),
-  `IntegrationAuthError` in `throughCache` (once a day per provider), croner
-  `onJobError` (once an hour per job), `POST /api/notifications/test`. Client:
-  `NotificationBell` in the rail and tab bar polls `GET /api/notifications`
-  every 30 s (one shared query), the inbox is the existing `Modal` **inside a
-  `Portal`** (the rail's `backdrop-filter` would otherwise box a fixed modal),
-  `NotificationWatch` toasts rows newer than its watermark via the Chakra
-  toaster in `app-shell.tsx` and mirrors the unread count to `setAppBadge`.
-  Assistant tool `get_notifications` reads unread rows. A daily
+  `notifications`, then fans out per `domain/routing.ts`: the kind × channel
+  matrix in `notification_preferences` (`*` row = default), quiet hours and
+  the phone's public URL in `notification_settings`, one row per attempt in
+  `notification_deliveries`. Channels: `desktop` = terminal-notifier via
+  `execFile` (macOS host only, click opens `COCKPIT_LOCAL_URL` or
+  `localhost:$PORT`), `phone` = ntfy JSON publish (provider `ntfy` in the
+  credential store, managed by `/api/notifications/phone` because the generic
+  credentials route only knows widget providers). `notify()` never throws.
+  Kinds are `source.event`; register a label in `KIND_LABELS`; `url` must be
+  a same-origin path. `scheduleNotification(fireAt, input)` stores a reminder
+  in `scheduled_notifications`; `reminders:drain` runs every minute and once
+  at boot (marks fired first, then notifies). Producers: recurring tasks
+  firing (`scheduler.ts`), `IntegrationAuthError` in `throughCache` (once a
+  day per provider), croner `onJobError` (once an hour per job),
+  `POST /api/notifications/test` (`{ delayMs }` schedules it instead).
+  Client: `NotificationBell` in the rail and tab bar polls
+  `GET /api/notifications` every 30 s (one shared query); inbox and settings
+  are the existing `Modal` **inside a `Portal`** (the rail's `backdrop-filter`
+  would otherwise box a fixed modal); `NotificationWatch` toasts rows newer
+  than its watermark via the Chakra toaster in `app-shell.tsx` and mirrors the
+  unread count to `setAppBadge`. Assistant tool `get_notifications`. A daily
   `notifications:prune` job drops read/dismissed rows after 30 days.
 - **Session resume** (language-learning): an in-progress topic session is persisted
   client-side via `usePersistentState` (localStorage, versioned `cockpit:ll:v1:` key

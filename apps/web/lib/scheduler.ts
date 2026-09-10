@@ -12,6 +12,7 @@ interface SchedulerState {
   started: boolean;
   refreshJob: Cron | null;
   pruneJob: Cron | null;
+  remindersJob: Cron | null;
   taskJobs: Map<string, Cron>;
 }
 
@@ -26,6 +27,7 @@ const state: SchedulerState = (globalForScheduler.cockpitScheduler ??= {
   started: false,
   refreshJob: null,
   pruneJob: null,
+  remindersJob: null,
   taskJobs: new Map(),
 });
 
@@ -113,6 +115,20 @@ export function startScheduler(): void {
   );
   // Outside croner, so the `catch` above does not cover it.
   void refreshAll().catch((err) => reportJobFailure("refresh (warm-up)", err));
+
+  // Reminders: anything due fires within the minute, and once at boot so a
+  // restart at 17:29 does not swallow a 17:30 reminder.
+  const drainReminders = async () => {
+    await notificationServices().reminders.drain();
+  };
+  state.remindersJob = new Cron(
+    "* * * * *",
+    { name: "reminders:drain", protect: true, catch: onJobError },
+    drainReminders,
+  );
+  void drainReminders().catch((err) =>
+    reportJobFailure("reminders:drain (boot)", err),
+  );
 
   // Keep the inbox bounded: read or dismissed rows older than 30 days go.
   state.pruneJob = new Cron(
