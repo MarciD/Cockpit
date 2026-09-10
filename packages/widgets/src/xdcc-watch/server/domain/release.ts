@@ -137,14 +137,16 @@ export function groupReleases(
   }));
 }
 
-/** Newest first; releases without a timestamp sink to the bottom, then by gets. */
+/**
+ * Newest first. Not every index reports when it first saw a pack — xdcc.info
+ * reports only when it last did — so fall back to that rather than sinking a
+ * whole source below the others. Undated releases go last, then by gets.
+ */
 export function sortReleases(releases: Release[]): Release[] {
   const gets = (r: Release) => r.offers.reduce((n, o) => n + (o.gets ?? 0), 0);
-  return [...releases].sort((a, b) => {
-    const ta = a.firstSeenAt?.getTime() ?? -1;
-    const tb = b.firstSeenAt?.getTime() ?? -1;
-    return tb - ta || gets(b) - gets(a);
-  });
+  const seen = (r: Release) =>
+    r.firstSeenAt?.getTime() ?? r.lastSeenAt?.getTime() ?? -1;
+  return [...releases].sort((a, b) => seen(b) - seen(a) || gets(b) - gets(a));
 }
 
 export function toOfferDto(o: Offer): OfferDto {

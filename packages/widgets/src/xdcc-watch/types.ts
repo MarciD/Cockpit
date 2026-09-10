@@ -1,7 +1,11 @@
 /** DTOs shared by tile, page and server routes. Framework-free. */
 
-export type SourceId = "xdccsearch" | "nibl";
-export const SOURCE_IDS: readonly SourceId[] = ["xdccsearch", "nibl"];
+export type SourceId = "xdccinfo" | "xdccsearch" | "nibl";
+export const SOURCE_IDS: readonly SourceId[] = [
+  "xdccinfo",
+  "xdccsearch",
+  "nibl",
+];
 
 export type MatchMode = "all" | "phrase" | "regex";
 

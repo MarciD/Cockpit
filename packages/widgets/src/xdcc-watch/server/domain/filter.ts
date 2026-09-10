@@ -82,7 +82,14 @@ function words(text: string): string[] {
     .filter(Boolean);
 }
 
-/** The query, re-checked locally so every source means the same thing. */
+/**
+ * The query, re-checked locally so every source means the same thing —
+ * indexers differ wildly, one matching every word and another any of them.
+ *
+ * A word matches a filename token it *starts*, not any substring: searching
+ * "reacher" must not return "…a Treacherous Swallow", while "s04" still finds
+ * "S04E06". A phrase is explicit, so it stays a plain substring match.
+ */
 export function matchesQuery(
   filename: string,
   query: string,
@@ -97,9 +104,9 @@ export function matchesQuery(
       return false;
     }
   }
-  const haystack = words(filename).join(" ");
-  if (mode === "phrase") return haystack.includes(words(q).join(" "));
-  return words(q).every((w) => haystack.includes(w));
+  const tokens = words(filename);
+  if (mode === "phrase") return tokens.join(" ").includes(words(q).join(" "));
+  return words(q).every((w) => tokens.some((t) => t.startsWith(w)));
 }
 
 function containsToken(filename: string, token: string): boolean {

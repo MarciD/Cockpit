@@ -30,7 +30,7 @@ export const defaultConfig: XdccWatchConfig = {
   defaultResolution: "1080p",
   defaultLanguage: "German",
   preferredNetworks: "abjects",
-  defaultSources: "xdccsearch, nibl",
+  defaultSources: "xdccinfo, xdccsearch, nibl",
   defaultIntervalHours: 12,
   globalExcludes: "sample, cam, ts, hdts, tc",
   defaultMinSizeMb: 0,

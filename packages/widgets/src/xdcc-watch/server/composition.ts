@@ -5,6 +5,7 @@ import { CachedArtwork, type TmdbConfig } from "./infrastructure/artwork";
 import { DrizzleSeenRepository } from "./infrastructure/drizzle-seen-repository";
 import { DrizzleWatchRepository } from "./infrastructure/drizzle-watch-repository";
 import { NiblIndexer } from "./infrastructure/indexer-nibl";
+import { XdccInfoIndexer } from "./infrastructure/indexer-xdccinfo";
 import { XdccSearchIndexer } from "./infrastructure/indexer-xdccsearch";
 import { parseFilename } from "./infrastructure/parser";
 
@@ -17,7 +18,11 @@ export interface XdccServices {
 export function buildServices(deps: WidgetServerDeps): XdccServices {
   const clock = { now: () => new Date() };
   const search = new SearchService(
-    [new XdccSearchIndexer(), new NiblIndexer(deps.cachedFetch)],
+    [
+      new XdccInfoIndexer(),
+      new XdccSearchIndexer(),
+      new NiblIndexer(deps.cachedFetch),
+    ],
     parseFilename,
     deps.cachedFetch,
     new CachedArtwork(deps.cachedFetch, () =>

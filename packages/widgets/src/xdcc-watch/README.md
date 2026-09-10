@@ -41,35 +41,49 @@ saying which filters it inherited) with the rest behind "advanced".
 Everything here is a **default**, not a per-search choice. Changing one never
 rewrites an existing watch, which snapshotted its filters when it was created.
 
-| Setting                                 | Type                                     | Default                     |
-| --------------------------------------- | ---------------------------------------- | --------------------------- |
-| `tileMode`                              | `watchlist` \| `search`                  | `watchlist`                 |
-| `defaultResolution`                     | `any` \| `720p` \| `1080p` \| `2160p`    | `1080p`                     |
-| `defaultLanguage`                       | `any` \| `German` \| `English` \| `dual` | `German`                    |
-| `preferredNetworks`                     | comma list, ordered                      | `abjects`                   |
-| `defaultSources`                        | comma list                               | `xdccsearch, nibl`          |
-| `defaultIntervalHours`                  | number                                   | `12`                        |
-| `globalExcludes`                        | comma list                               | `sample, cam, ts, hdts, tc` |
-| `defaultMinSizeMb` · `defaultMaxSizeGb` | numbers, `0` = off                       | `0` · `0`                   |
-| `onlyIndexedAfterSubscribe`             | boolean                                  | `on`                        |
-| `artwork` · `showCommands`              | booleans                                 | `on` · `on`                 |
-| `resultsPerSource`                      | number, ≤ 50                             | `50`                        |
+| Setting                                 | Type                                     | Default                      |
+| --------------------------------------- | ---------------------------------------- | ---------------------------- |
+| `tileMode`                              | `watchlist` \| `search`                  | `watchlist`                  |
+| `defaultResolution`                     | `any` \| `720p` \| `1080p` \| `2160p`    | `1080p`                      |
+| `defaultLanguage`                       | `any` \| `German` \| `English` \| `dual` | `German`                     |
+| `preferredNetworks`                     | comma list, ordered                      | `abjects`                    |
+| `defaultSources`                        | comma list                               | `xdccinfo, xdccsearch, nibl` |
+| `defaultIntervalHours`                  | number                                   | `12`                         |
+| `globalExcludes`                        | comma list                               | `sample, cam, ts, hdts, tc`  |
+| `defaultMinSizeMb` · `defaultMaxSizeGb` | numbers, `0` = off                       | `0` · `0`                    |
+| `onlyIndexedAfterSubscribe`             | boolean                                  | `on`                         |
+| `artwork` · `showCommands`              | booleans                                 | `on` · `on`                  |
+| `resultsPerSource`                      | number, ≤ 50                             | `50`                         |
 
 Posters are optional: AniList needs no key, TMDB uses a `tmdb` credential
 (`{ apiKey }`) if one is stored. Without either you get rows without artwork.
 
 ## Sources
 
-| Source           | What it gives                                                                                             |
-| ---------------- | --------------------------------------------------------------------------------------------------------- |
-| `xdccsearch.com` | JSON, first-indexed and last-seen timestamps, five networks including Abjects. One page of ≤ 50 per poll. |
-| `nibl.co.uk`     | JSON, anime on Rizon; `lastModified` behaves as first-seen of a (bot, pack, name, size) tuple.            |
+| Source           | What it gives                                                                                                                                                                                                                                              |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `xdcc.info`      | The broadest: a documented, free JSON API over eight networks — GlobalIRC, Rizon, SceneP2P, CoreIRC, Abjects, TerraChat, Abandoned-IRC, Relaxedirc — and 1.2 M packs. Matches every word of the query. Reports `last_seen` but no first-indexed timestamp. |
+| `xdccsearch.com` | JSON, first-indexed and last-seen timestamps, five networks. Its `total` counts loose matches, so the local re-check does the real filtering.                                                                                                              |
+| `nibl.co.uk`     | JSON, anime on Rizon; `lastModified` behaves as first-seen of a (bot, pack, name, size) tuple.                                                                                                                                                             |
 
 SunXDCC was deleted in April 2026 and ixIRC is a parked domain; its successor
 skullxdcc forbids automation (robots plus proof-of-work), so neither is used.
-Requests carry a real User-Agent, take one page per poll, and go through the
-shared cache (ten minutes per source and query), so a failing source serves its
-last good answer instead of emptying the tile.
+xdcc.info's `robots.txt` disallows `/search`, the faceted HTML page whose
+crawling "pins the server"; `/api/v1/*` is its documented public API and is
+not disallowed.
+
+Requests carry a real User-Agent, take one page of at most 50 per poll, and go
+through the shared cache (ten minutes per source and query), so a failing
+source serves its last good answer instead of emptying the tile.
+
+## Matching
+
+Each index means something different by a query: one matches every word,
+another any of them, so the query is re-checked locally and every source ends
+up meaning the same thing. A word matches a filename token it **starts** —
+searching `reacher` does not return "…a Treacherous Swallow", while `s04`
+still finds `S04E06`. A quoted phrase is an explicit substring match, and
+regex mode is there for the rest.
 
 ## Identity and what counts as new
 
@@ -77,6 +91,9 @@ Pack numbers get renumbered and the same file sits on several bots, so identity
 is the **normalised filename** (lowercased, extension and `[HASH]` stripped,
 separators collapsed). In series mode the identity is the parsed season and
 episode instead, so one episode notifies once however many files carry it.
+
+Results are ordered newest first, by when a source first saw a pack, or when
+it last saw one where that is all it reports.
 
 A watch's first run **seeds silently**: everything already out there is recorded
 as seen, so day one is quiet. After that, `indexed-after` (the default) only
