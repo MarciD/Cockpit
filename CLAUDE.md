@@ -132,8 +132,16 @@ dedupeKey?, dedupeWindowMs? })` from `composition.ts` persists a row in
 
 - **Anthropic SDK + Zod v3:** `betaZodTool` is typed for Zod v4 → use `betaTool`
   (raw JSON Schema, `as const` on the schema) from `@anthropic-ai/sdk/helpers/beta/json-schema`.
+  Same reason for structured outputs: hand `output_config.format` a raw JSON
+  Schema (`kitchen-coach`), not `zodOutputFormat`. Constrained decoding then
+  guarantees the shape — unlike a forced tool call, whose input is only a hint
+  (`structuredCall` in `language-learning`, see the gotcha below). Every object
+  needs `additionalProperties: false`; no numeric/string constraints, no
+  recursion, `minItems` only 0 or 1.
   Get SDK/model specifics from the bundled `claude-api` skill; model tiers:
   `fast`→`claude-haiku-4-5`, `balanced`→`claude-sonnet-5`, `deep`→`claude-opus-4-8`.
+- **All eleven widgets have a `README.md` + `screenshots/`.** Keep both current
+  when a widget changes; the screenshot tool is `ops/screenshots`.
 - **Zod stays on v3, deliberately.** `widget-config-form.tsx` builds the
   settings form by reading `_def.typeName` off each schema field, which Zod 4
   removes, and `@hookform/resolvers@3`'s `zodResolver` throws outright on a v4

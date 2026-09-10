@@ -109,6 +109,11 @@ Rules:
 the drizzle-kit schema glob. `apps/web` no longer holds a single
 widget-specific route, adapter or job.
 
+`kitchen-coach` is the second worked example after `language-learning`: same
+layering, but with structured outputs, a streaming chat route, and pure domain
+code for the things a model should never be asked (scaling, the seasonal
+calendar, intent classification).
+
 Three things the app still owns on a widget's behalf, because they are
 cross-cutting: the credential store (a widget gets `getProviderConfig` and
 friends through `deps`, and the calendar widget gets its list store injected),

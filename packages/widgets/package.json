@@ -9,7 +9,8 @@
     "./server": "./src/server/registry.ts",
     "./server/contract": "./src/server/contract.ts",
     "./language-learning/page": "./src/language-learning/page/full-page.tsx",
-    "./xdcc-watch/server": "./src/xdcc-watch/server/index.ts"
+    "./xdcc-watch/server": "./src/xdcc-watch/server/index.ts",
+    "./kitchen-coach/server": "./src/kitchen-coach/server/index.ts"
   },
   "types": "./src/registry.ts",
   "scripts": {

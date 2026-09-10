@@ -71,6 +71,13 @@
       "when": 1789019763459,
       "tag": "0009_public_domino",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1789039515568,
+      "tag": "0010_elite_colossus",
+      "breakpoints": true
     }
   ]
 }

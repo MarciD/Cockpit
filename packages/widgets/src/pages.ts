@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { KitchenCoachPage } from "./kitchen-coach/page/full-page";
 import { LanguageLearningPage } from "./language-learning/page/full-page";
 import { XdccWatchPage } from "./xdcc-watch/page/full-page";
 
@@ -17,6 +18,7 @@ export interface WidgetPageProps {
  * `"use client"`.
  */
 export const pageRegistry: Record<string, ComponentType<WidgetPageProps>> = {
+  "kitchen-coach": KitchenCoachPage,
   "language-learning": LanguageLearningPage,
   "xdcc-watch": XdccWatchPage,
 };

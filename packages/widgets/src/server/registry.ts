@@ -4,6 +4,7 @@ import { aiAssistantServer } from "../ai-assistant/server";
 import { calendarServerWith } from "../google-calendar-today/server";
 import { gitlabOpenMrsServer } from "../gitlab-open-mrs/server";
 import { languageLearningServer } from "../language-learning/server";
+import { kitchenCoachServer } from "../kitchen-coach/server";
 import { jiraMyIssuesServer } from "../jira-my-issues/server";
 import { newsServer } from "../news/server";
 import { recurringTasksServer } from "../recurring-tasks/server";
@@ -31,6 +32,7 @@ export const serverWidgetFactories: Record<string, WidgetServerFactory> = {
   "ai-assistant": aiAssistantServer,
   "gitlab-open-mrs": gitlabOpenMrsServer,
   "jira-my-issues": jiraMyIssuesServer,
+  "kitchen-coach": kitchenCoachServer,
   "language-learning": languageLearningServer,
   news: newsServer,
   "recurring-tasks": recurringTasksServer,

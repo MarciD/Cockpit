@@ -4,6 +4,7 @@ import customApi from "./custom-api";
 import gitlabOpenMrs from "./gitlab-open-mrs";
 import googleCalendarToday from "./google-calendar-today";
 import jiraMyIssues from "./jira-my-issues";
+import kitchenCoach from "./kitchen-coach";
 import languageLearning from "./language-learning";
 import news from "./news";
 import recurringTasks from "./recurring-tasks";
@@ -27,6 +28,7 @@ const definitions: WidgetDefinition[] = [
   news as unknown as WidgetDefinition,
   recurringTasks as unknown as WidgetDefinition,
   customApi as unknown as WidgetDefinition,
+  kitchenCoach as unknown as WidgetDefinition,
   languageLearning as unknown as WidgetDefinition,
 ];
 
