@@ -95,6 +95,31 @@ jobs:
           # cannot quietly lose the guard.
           assert "$(code -H 'Origin: https://evil.test' 'http://127.0.0.1:3000/api/w/weather?lat=52.52&lon=13.4')" 403 "CSRF: cross-origin widget GET refused"
 
+      # The generic dispatcher keys a route on its first path segment, so a
+      # widget that keeps its routes at its own root only reaches them via the
+      # fallback. GET and POST hit it either way — which is why a broken
+      # PATCH /api/w/todo/<id> went unnoticed until a to-do refused to tick.
+      - name: Widget routes still dispatch
+        run: |
+          set -e
+          base=http://127.0.0.1:3000
+          code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
+          assert() {
+            if [ "$1" != "$2" ]; then echo "FAIL $3: got $1, want $2"; exit 1; fi
+            echo "ok   $3"
+          }
+          desk=$(curl -s -X POST "$base/api/profiles" \
+            -H 'content-type: application/json' -d '{"name":"CI desk"}' | jq -r .id)
+          todo=$(curl -s -X POST "$base/api/w/todo" \
+            -H 'content-type: application/json' \
+            -d "{\"profileId\":\"$desk\",\"title\":\"dispatch\"}" | jq -r .id)
+          assert "$(code "$base/api/w/todo?profileId=$desk")" 200 "root GET"
+          assert "$(code -X PATCH -H 'content-type: application/json' -d '{"done":true}' "$base/api/w/todo/$todo")" 200 "root PATCH carries the id"
+          assert "$(code -X DELETE "$base/api/w/todo/$todo")" 200 "root DELETE carries the id"
+          assert "$(code "$base/api/w/xdcc-watch/watches?profileId=$desk")" 200 "namespaced GET"
+          assert "$(code "$base/api/w/xdcc-watch/nope")" 404 "unknown segment refused"
+          assert "$(code "$base/api/w/nope")" 404 "unknown widget refused"
+
       # A misconfigured server must stop, not linger as a container Docker
       # still reports as running but that can never serve.
       - name: Refuses to start without COCKPIT_SECRET

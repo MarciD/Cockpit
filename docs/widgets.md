@@ -120,7 +120,7 @@ friends through `deps`, and the calendar widget gets its list store injected),
 the notification core, and the integration cache (`cachedFetch` for keyless
 sources, `throughCache` for credentialed ones).
 
-Four things the glue makes non-obvious:
+Five things the glue makes non-obvious:
 
 - **`pages.ts` must not be a `"use client"` module.** A server component
   importing one receives client-reference proxies, so the page lookup comes
@@ -136,6 +136,12 @@ Four things the glue makes non-obvious:
 - **A widget whose jobs depend on stored rows** declares `jobs` as a function
   and calls `deps.reloadJobs()` after a change; each job is handed its own
   `nextRunAt`, so the widget can store it without knowing about croner.
+- **A route map keyed `"<METHOD> "` is the widget's root _and_ its fallback.**
+  The dispatcher looks up `"<METHOD> <first segment>"` first; if no route
+  carries that name it falls back to the root handler and hands it the whole
+  path. That is what lets `todo` serve `GET /api/w/todo` and
+  `PATCH /api/w/todo/<id>` from one map. A widget that mounts routes under
+  named segments gets the rest of the path, as before.
 
 ---
 

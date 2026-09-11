@@ -36,11 +36,14 @@ contract + a worked example; `SECURITY.md` has the threat model.
   deps (db, `notify`, `scheduleNotification`, credentials, `cachedFetch`, log),
   `app/api/w/[widget]/[[...path]]/route.ts` dispatches `"<METHOD> <segment>"`
   route maps, `app/w/[widget]/page.tsx` renders `pageRegistry`, and the
-  scheduler registers each module's jobs. Two traps: `packages/widgets/src/pages.ts`
+  scheduler registers each module's jobs. Three traps: `packages/widgets/src/pages.ts`
   must **not** be `"use client"` (a server component would get client-reference
-  proxies and the page 404s), and notification kinds are re-registered on every
+  proxies and the page 404s); notification kinds are re-registered on every
   `widgetServerModules()` call into a `globalThis` registry, because each Next
-  route bundle gets its own module instances.
+  route bundle gets its own module instances; and a route named `"<METHOD> "`
+  is both the widget's root route and the fallback for any unmatched first
+  segment, receiving the full path — which is how `todo` and `recurring-tasks`
+  serve `GET /api/w/todo` and `PATCH /api/w/todo/<id>` from one map.
 - Keep the Atelier look: tokens/`layerStyles` in `apps/web/lib/theme.ts`
   (`tile`/`raised`/`inset`, `accent`, `status.*`); never hardcode hex — use tokens.
 
