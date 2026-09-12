@@ -2,9 +2,33 @@ import type { SourceId } from "../../types";
 import type { Offer, Pack, Parsed } from "./release";
 import type { NewWatch, Watch } from "./watch";
 
+/**
+ * What the filter wants, phrased so an indexer can narrow its page upstream
+ * when its API allows: a single resolution ("1080p") and the word a filename
+ * carries for the single wanted language ("german"). Hints only — the local
+ * re-check stays authoritative, and an indexer ignores what it cannot honour.
+ */
+export interface IndexerHints {
+  resolution: string | null;
+  languageWord: string | null;
+}
+
+export interface IndexerQuery {
+  query: string;
+  /** Upper bound; each indexer clamps to its own page maximum. */
+  limit: number;
+  hints: IndexerHints;
+}
+
+export interface IndexerPage {
+  packs: Pack[];
+  /** How many packs the source says it has for this query, if it says. */
+  total: number | null;
+}
+
 export interface Indexer {
   readonly id: SourceId;
-  search(query: string, limit: number): Promise<Pack[]>;
+  search(query: IndexerQuery): Promise<IndexerPage>;
 }
 
 export interface ArtworkProvider {

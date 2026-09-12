@@ -5,6 +5,17 @@ import type { OfferDto, ReleaseFilter, WatchDto } from "../types";
 export const JSON_HEADERS = { "content-type": "application/json" };
 export const API = "/api/w/xdcc-watch";
 
+/** The full page, optionally focused on one watch or opened on a search. */
+export function pageHref(
+  profileId: string,
+  focus: { watch?: string; q?: string } = {},
+): string {
+  const params = new URLSearchParams({ profile: profileId });
+  if (focus.watch) params.set("watch", focus.watch);
+  if (focus.q) params.set("q", focus.q);
+  return `/w/xdcc-watch?${params.toString()}`;
+}
+
 export function formatSize(bytes: number | null): string {
   if (bytes === null) return "—";
   const gb = bytes / 1024 ** 3;
@@ -51,6 +62,8 @@ export interface DefaultChip {
   id: string;
   label: string;
   negative?: boolean;
+  /** Orders offers and hides nothing, so there is nothing to lift. */
+  fixed?: boolean;
 }
 
 export function defaultChips(
@@ -60,7 +73,8 @@ export function defaultChips(
   const chips: DefaultChip[] = [];
   for (const r of filter.resolutions) chips.push({ id: `res:${r}`, label: r });
   for (const l of filter.languages) chips.push({ id: `lang:${l}`, label: l });
-  if (networks.length) chips.push({ id: "net", label: `${networks[0]} first` });
+  if (networks.length)
+    chips.push({ id: "net", label: `${networks[0]} first`, fixed: true });
   if (filter.mustNot.length) {
     chips.push({
       id: "exclude",

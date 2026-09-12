@@ -5,13 +5,13 @@ import {
   readJson,
   type WidgetRoutes,
 } from "../../server/contract";
-import { MAX_RESULTS_PER_SOURCE } from "../config";
 import {
   SOURCE_IDS,
   type SearchResponseDto,
   type SourceId,
   type WatchSettings,
 } from "../types";
+import { MAX_PAGE } from "./application/search-service";
 import { normalizeFilter } from "./domain/filter";
 import { toReleaseDto } from "./domain/release";
 import { NEWNESS_RULES, NOTIFY_MODES } from "./domain/watch";
@@ -112,10 +112,10 @@ export function buildRoutes(services: XdccServices): WidgetRoutes {
       const params = ctx.url.searchParams;
       const query = params.get("q")?.trim() ?? "";
       if (!query) return badRequest("q is required");
-      const limitParam = Number(params.get("limit") ?? MAX_RESULTS_PER_SOURCE);
+      const limitParam = Number(params.get("limit") ?? MAX_PAGE);
       const limit = Number.isFinite(limitParam)
-        ? Math.min(Math.max(1, Math.floor(limitParam)), MAX_RESULTS_PER_SOURCE)
-        : MAX_RESULTS_PER_SOURCE;
+        ? Math.min(Math.max(1, Math.floor(limitParam)), MAX_PAGE)
+        : MAX_PAGE;
       let filter;
       try {
         filter = normalizeFilter(JSON.parse(params.get("filter") ?? "{}"));
@@ -141,6 +141,12 @@ export function buildRoutes(services: XdccServices): WidgetRoutes {
         hidden: result.hidden,
       };
       return json(payload, { headers: { "cache-control": "no-store" } });
+    },
+
+    "GET defaults": async (_req, ctx) => {
+      const profileId = ctx.url.searchParams.get("profileId");
+      if (!profileId) return badRequest("profileId is required");
+      return json(services.defaults(profileId));
     },
 
     "GET watches": async (_req, ctx) => {

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Box, Flex, Image, Stack, Text, chakra } from "@chakra-ui/react";
-import type { ReleaseDto } from "../types";
+import type { OfferDto, ReleaseDto } from "../types";
 import { copyCommand, formatAge, formatSize } from "./lib";
 
 interface ReleaseRowProps {
@@ -11,14 +11,20 @@ interface ReleaseRowProps {
   isNew?: boolean;
 }
 
-/** One release: poster, the parsed headline in prose, the offers in mono. */
+/**
+ * One release: poster, the parsed headline in prose, the offers in mono.
+ * Offers arrive ranked (preferred network, then gets), so only the best one
+ * shows until asked — a release on fifteen bots is one line, not fifteen.
+ */
 export function ReleaseRow({ release, showCommands, isNew }: ReleaseRowProps) {
   const [copied, setCopied] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const more = release.offers.length - 1;
+  const offers = expanded ? release.offers : release.offers.slice(0, 1);
 
-  async function copy(index: number) {
-    const offer = release.offers[index];
-    if (!offer) return;
-    setCopied((await copyCommand(offer)) ? `${index}` : null);
+  async function copy(offer: OfferDto) {
+    const ok = await copyCommand(offer);
+    setCopied(ok ? offerKey(offer) : null);
     setTimeout(() => setCopied(null), 1500);
   }
 
@@ -64,13 +70,8 @@ export function ReleaseRow({ release, showCommands, isNew }: ReleaseRowProps) {
           {release.offers[0]?.filename}
         </Text>
         <Stack gap="0.5">
-          {release.offers.map((offer, i) => (
-            <Flex
-              key={`${offer.source}-${offer.bot}-${offer.pack}`}
-              gap="2"
-              align="center"
-              wrap="wrap"
-            >
+          {offers.map((offer) => (
+            <Flex key={offerKey(offer)} gap="2" align="center" wrap="wrap">
               <Text textStyle="meta" color="fg.muted">
                 {offer.network}
                 {offer.channel ? ` · ${offer.channel}` : ""} · {offer.bot} · #
@@ -80,20 +81,40 @@ export function ReleaseRow({ release, showCommands, isNew }: ReleaseRowProps) {
               {showCommands ? (
                 <chakra.button
                   type="button"
-                  onClick={() => void copy(i)}
+                  onClick={() => void copy(offer)}
                   textStyle="meta"
                   color="link"
                   cursor="pointer"
                   _hover={{ color: "link.hover" }}
                   aria-label={`Copy the command for ${offer.bot} pack ${offer.pack}`}
                 >
-                  {copied === `${i}` ? "copied" : "copy"}
+                  {copied === offerKey(offer) ? "copied" : "copy"}
                 </chakra.button>
               ) : null}
             </Flex>
           ))}
+          {more > 0 ? (
+            <chakra.button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              alignSelf="flex-start"
+              textStyle="meta"
+              color="link"
+              cursor="pointer"
+              _hover={{ color: "link.hover" }}
+              aria-expanded={expanded}
+            >
+              {expanded
+                ? "fewer"
+                : `+${more} more ${more === 1 ? "bot" : "bots"}`}
+            </chakra.button>
+          ) : null}
         </Stack>
       </Box>
     </Flex>
   );
+}
+
+function offerKey(offer: OfferDto): string {
+  return `${offer.network}-${offer.bot}-${offer.pack}`;
 }

@@ -18,8 +18,10 @@ import {
   describeWatch,
   formatAge,
   liftChip,
+  pageHref,
 } from "./ui/lib";
 import { ReleaseRow } from "./ui/release-row";
+import { SourceStatus } from "./ui/source-status";
 
 interface Data {
   profileId: string;
@@ -28,11 +30,8 @@ interface Data {
   newTotal: number;
 }
 
-function pageHref(profileId: string, watchId?: string): string {
-  const params = new URLSearchParams({ profile: profileId });
-  if (watchId) params.set("watch", watchId);
-  return `/w/xdcc-watch?${params.toString()}`;
-}
+/** The tile shows the top of the list; the rest is one tap away on the page. */
+const TILE_ROWS = 8;
 
 function Panel({ config, data }: WidgetComponentProps<XdccWatchConfig, Data>) {
   const queryClient = useQueryClient();
@@ -54,7 +53,6 @@ function Panel({ config, data }: WidgetComponentProps<XdccWatchConfig, Data>) {
         filter: JSON.stringify(filter),
         sources: data.defaults.sources.join(","),
         networks: data.defaults.preferredNetworks.join(","),
-        limit: String(data.defaults.resultsPerSource),
         artwork: data.defaults.artwork ? "1" : "0",
       });
       const res = await fetch(`${API}/search?${params}`, { signal });
@@ -82,7 +80,15 @@ function Panel({ config, data }: WidgetComponentProps<XdccWatchConfig, Data>) {
     });
   }, [data.profileId, data.defaults, submitted, filter, queryClient]);
 
+  const clear = useCallback(() => {
+    setQuery("");
+    setSubmitted("");
+    setFilter(data.defaults.filter);
+  }, [data.defaults.filter]);
+
   const searching = submitted.length > 0;
+  const releases = results.data?.releases ?? [];
+  const overflow = Math.max(0, releases.length - TILE_ROWS);
 
   return (
     <Stack gap="3" h="100%">
@@ -124,30 +130,59 @@ function Panel({ config, data }: WidgetComponentProps<XdccWatchConfig, Data>) {
             placeholder="Search packs…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") clear();
+            }}
             _focusVisible={{ outline: "none" }}
             aria-label="Search packs"
           />
+          {query || searching ? (
+            <chakra.button
+              type="button"
+              onClick={clear}
+              color="fg.faint"
+              fontSize="sm"
+              lineHeight="1"
+              cursor="pointer"
+              _hover={{ color: "fg" }}
+              aria-label="Clear the search"
+              title="Clear (Esc)"
+            >
+              ×
+            </chakra.button>
+          ) : null}
         </Flex>
       </chakra.form>
 
       {searching ? (
         <Flex gap="2" wrap="wrap" align="center">
-          {chips.map((chip) => (
-            <chakra.button
-              key={chip.id}
-              type="button"
-              onClick={() => setFilter((f) => liftChip(f, chip.id))}
-              textStyle="meta"
-              color={chip.negative ? "fg.faint" : "accent.solid"}
-              textDecoration={chip.negative ? "line-through" : undefined}
-              cursor="pointer"
-              title="Lift this default for this search"
-            >
-              {chip.label} ×
-            </chakra.button>
-          ))}
-          {results.data && results.data.hidden > 0 ? (
-            <Text textStyle="meta">{results.data.hidden} hidden</Text>
+          {chips.map((chip) =>
+            chip.fixed ? (
+              <Text key={chip.id} textStyle="meta" color="accent.solid">
+                {chip.label}
+              </Text>
+            ) : (
+              <chakra.button
+                key={chip.id}
+                type="button"
+                onClick={() => setFilter((f) => liftChip(f, chip.id))}
+                textStyle="meta"
+                color={chip.negative ? "fg.faint" : "accent.solid"}
+                textDecoration={chip.negative ? "line-through" : undefined}
+                cursor="pointer"
+                title="Lift this default for this search"
+              >
+                {chip.label} ×
+              </chakra.button>
+            ),
+          )}
+          {results.data ? (
+            <Text textStyle="meta" ml="auto">
+              {releases.length} release{releases.length === 1 ? "" : "s"}
+              {results.data.hidden > 0
+                ? ` · ${results.data.hidden} hidden`
+                : ""}
+            </Text>
           ) : null}
         </Flex>
       ) : null}
@@ -162,20 +197,42 @@ function Panel({ config, data }: WidgetComponentProps<XdccWatchConfig, Data>) {
             <Text fontSize="sm" color="danger">
               The search failed. Try again in a moment.
             </Text>
-          ) : results.data && results.data.releases.length > 0 ? (
-            results.data.releases
-              .slice(0, 8)
-              .map((release) => (
+          ) : releases.length > 0 ? (
+            <>
+              {releases.slice(0, TILE_ROWS).map((release) => (
                 <ReleaseRow
                   key={release.key}
                   release={release}
                   showCommands={data.defaults.showCommands}
                 />
-              ))
+              ))}
+              {overflow > 0 ? (
+                <Link
+                  href={pageHref(data.profileId, { q: submitted })}
+                  display="block"
+                  py="3"
+                  textStyle="label"
+                  color="link"
+                  _hover={{ color: "link.hover" }}
+                >
+                  {overflow} more on the full page →
+                </Link>
+              ) : null}
+              {results.data ? (
+                <Box pt="2">
+                  <SourceStatus sources={results.data.sources} problemsOnly />
+                </Box>
+              ) : null}
+            </>
           ) : (
-            <Text fontSize="sm" color="fg.muted">
-              Nothing matched. Lift a default above, or try fewer words.
-            </Text>
+            <Stack gap="2">
+              <Text fontSize="sm" color="fg.muted">
+                Nothing matched. Lift a default above, or try fewer words.
+              </Text>
+              {results.data ? (
+                <SourceStatus sources={results.data.sources} />
+              ) : null}
+            </Stack>
           )
         ) : data.watches.length === 0 ? (
           <Text fontSize="sm" color="fg.muted">
@@ -183,14 +240,18 @@ function Panel({ config, data }: WidgetComponentProps<XdccWatchConfig, Data>) {
           </Text>
         ) : (
           data.watches.map((watch) => (
-            <Flex
+            <Link
               key={watch.id}
-              justify="space-between"
-              align="center"
+              href={pageHref(data.profileId, { watch: watch.id })}
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
               gap="2"
               py="2"
               borderBottomWidth="1px"
               borderColor="border"
+              color="fg"
+              _hover={{ textDecoration: "none", color: "link.hover" }}
             >
               <Box minW="0">
                 <Text fontSize="sm" lineClamp={1}>
@@ -214,21 +275,21 @@ function Panel({ config, data }: WidgetComponentProps<XdccWatchConfig, Data>) {
                   {watch.newCount} new
                 </Box>
               ) : null}
-            </Flex>
+            </Link>
           ))
         )}
       </Box>
 
       <Flex justify="space-between" align="center" gap="2">
         <Link
-          href={pageHref(data.profileId)}
+          href={pageHref(data.profileId, searching ? { q: submitted } : {})}
           color="link"
           textStyle="label"
           _hover={{ color: "link.hover" }}
         >
           open release watch →
         </Link>
-        {searching && results.data && results.data.releases.length > 0 ? (
+        {searching && releases.length > 0 ? (
           <chakra.button
             type="button"
             onClick={() => void watchThis()}

@@ -1,4 +1,4 @@
-import type { Indexer } from "../domain/ports";
+import type { Indexer, IndexerPage, IndexerQuery } from "../domain/ports";
 import type { Pack } from "../domain/release";
 
 const ENDPOINT = "https://xdccsearch.com/api/search";
@@ -31,11 +31,15 @@ const unixDate = (v: unknown): Date | null => {
   return n && n > 0 ? new Date(n * 1000) : null;
 };
 
-/** xdccsearch.com: JSON, first-indexed and last-seen timestamps, five networks (incl. Abjects). */
+/**
+ * xdccsearch.com: JSON, first-indexed and last-seen timestamps, five networks
+ * (incl. Abjects). It matches *any* query word, so the hints stay local here:
+ * an appended word would widen the page, not narrow it.
+ */
 export class XdccSearchIndexer implements Indexer {
   readonly id = "xdccsearch" as const;
 
-  async search(query: string, limit: number): Promise<Pack[]> {
+  async search({ query, limit }: IndexerQuery): Promise<IndexerPage> {
     const url = new URL(ENDPOINT);
     url.searchParams.set("query", query);
     url.searchParams.set("page", "1");
@@ -51,7 +55,10 @@ export class XdccSearchIndexer implements Indexer {
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) throw new Error(`xdccsearch responded HTTP ${res.status}`);
-    const json = (await res.json()) as { data?: Row[] };
+    const json = (await res.json()) as {
+      data?: Row[];
+      pagination?: { total?: unknown };
+    };
     const rows = Array.isArray(json.data) ? json.data : [];
 
     const packs: Pack[] = [];
@@ -71,6 +78,6 @@ export class XdccSearchIndexer implements Indexer {
         lastSeenAt: unixDate(row.seen_time),
       });
     }
-    return packs;
+    return { packs, total: num(json.pagination?.total) };
   }
 }

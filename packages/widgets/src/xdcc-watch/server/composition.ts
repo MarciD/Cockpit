@@ -1,4 +1,7 @@
+import { listInstances } from "@cockpit/db";
 import type { WidgetServerDeps } from "../../server/contract";
+import { defaultsFromConfig } from "../config";
+import type { DefaultsDto } from "../types";
 import { SearchService } from "./application/search-service";
 import { WatchService } from "./application/watch-service";
 import { CachedArtwork, type TmdbConfig } from "./infrastructure/artwork";
@@ -12,6 +15,8 @@ import { parseFilename } from "./infrastructure/parser";
 export interface XdccServices {
   search: SearchService;
   watches: WatchService;
+  /** The desk's widget settings turned into search defaults; the schema defaults when the desk has no tile. */
+  defaults: (profileId: string) => DefaultsDto;
 }
 
 /** The only place adapters are wired to services. */
@@ -39,5 +44,10 @@ export function buildServices(deps: WidgetServerDeps): XdccServices {
     () => crypto.randomUUID(),
     deps.log,
   );
-  return { search, watches };
+  const defaults = (profileId: string) =>
+    defaultsFromConfig(
+      listInstances(deps.db, profileId).find((i) => i.widgetId === "xdcc-watch")
+        ?.config ?? {},
+    );
+  return { search, watches, defaults };
 }

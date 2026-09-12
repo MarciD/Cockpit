@@ -9,6 +9,44 @@ at 0.x — minor bumps may still change behaviour.
 
 ### Fixed
 
+- Release watch returned a handful of results where the index has thousands.
+  It took one page of the 50 most recently seen packs per source and applied
+  the defaults afterwards — but "recently seen" on xdcc.info means "on a bot
+  that is online right now", so the page was a random slice of the index and
+  the 1080p/German filter emptied it. For `reacher`: 1552 packs on the site,
+  50 fetched, 9 surviving. The single-valued defaults now travel upstream as
+  hints (`quality=1080p`, the word `german` appended for indexes that match
+  every query word), pages go to each index's own maximum, and every search
+  says how much of each source it holds (`xdccsearch 50 of 262`). The same
+  search now returns 24 releases.
+
+- Excludes matched substrings, so the default `ts` hid "Karambits" and
+  "Kitsune", `cam` hid "Camera", and `tc` hid the STC and XTC groups. `must`
+  and `mustNot` terms now match whole filename tokens.
+
+- The Release watch full page ignored the desk's widget settings: it started
+  from an empty filter, showed no chips, and every watch created there
+  inherited nothing. It now reads them from a new `GET defaults` route, shows
+  them before the first search, and snapshots them into new watches. Opened
+  with `?q=` it searches straight away, which is what the tile now links to.
+
+- Results ordered by timestamp put whatever bots happened to be online on top,
+  and mixed two different clocks: a release found on two indexes sorted by a
+  months-old first-seen, one found on a single index by "seen a minute ago".
+  Ordering is now by title, then newest episode, then year and gets. The same
+  bot and pack reported by two indexes is one offer rather than two.
+
+### Changed
+
+- A Release watch release shows its best offer and folds the rest behind
+  "+N more bots"; a failing source says so instead of silently contributing
+  nothing; the tile's search is clearable and its watch rows open the page.
+  The headline carries the codec and group, so two releases of one episode are
+  told apart. The `resultsPerSource` setting is gone — the page size is each
+  index's own maximum now that the defaults narrow the query.
+
+### Fixed
+
 - The scheduler could take the whole server down. croner's `catch` option
   defaults to `false`, which makes it await the job function unguarded, so a
   throw or a rejected promise inside a job became an unhandled rejection and

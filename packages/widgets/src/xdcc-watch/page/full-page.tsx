@@ -32,12 +32,17 @@ import {
   liftChip,
 } from "../ui/lib";
 import { ReleaseRow } from "../ui/release-row";
+import { SourceStatus } from "../ui/source-status";
 import { WatchEditor } from "../ui/watch-editor";
+
+const RESOLUTIONS = ["720p", "1080p", "2160p"];
+const LANGUAGES = ["German", "English", "dual"];
 
 /**
  * The full page: the watch list on the left, search and results on the right.
- * Widget settings are the source of the defaults, so this page reads them from
- * the first search it runs (the server applies them) and shows them as chips.
+ * The desk's widget settings are the defaults here too — read once from
+ * `GET defaults`, shown as chips, and snapshotted into every watch created.
+ * Opened with `?q=` (from the tile) it searches right away.
  */
 export function XdccWatchPage({
   profileId,
@@ -45,8 +50,9 @@ export function XdccWatchPage({
   backHref,
 }: WidgetPageProps) {
   const queryClient = useQueryClient();
-  const [query, setQuery] = useState("");
-  const [submitted, setSubmitted] = useState("");
+  const [query, setQuery] = useState(params.q ?? "");
+  const [submitted, setSubmitted] = useState(params.q?.trim() ?? "");
+  /** null = untouched, i.e. whatever the defaults say. */
   const [filter, setFilter] = useState<ReleaseFilter | null>(null);
   const [sources, setSources] = useState<SourceId[] | null>(null);
   const [editing, setEditing] = useState<WatchDto | null>(null);
@@ -55,6 +61,18 @@ export function XdccWatchPage({
 
   const defaults = useQuery({
     queryKey: ["xdcc-watch", "defaults", profileId],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const res = await fetch(
+        `${API}/defaults?profileId=${encodeURIComponent(profileId)}`,
+      );
+      if (!res.ok) throw new Error(`Request failed (HTTP ${res.status})`);
+      return (await res.json()) as DefaultsDto;
+    },
+  });
+
+  const watchList = useQuery({
+    queryKey: ["xdcc-watch", "watches", profileId],
     queryFn: async () => {
       const res = await fetch(
         `${API}/watches?profileId=${encodeURIComponent(profileId)}`,
@@ -75,7 +93,10 @@ export function XdccWatchPage({
     },
   });
 
-  const effectiveFilter = filter ?? emptyFilter();
+  const effectiveFilter = filter ?? defaults.data?.filter ?? emptyFilter();
+  const effectiveSources = sources ?? defaults.data?.sources ?? [...SOURCE_IDS];
+  const networks = defaults.data?.preferredNetworks ?? [];
+
   const results = useQuery({
     queryKey: [
       "xdcc-watch",
@@ -83,27 +104,33 @@ export function XdccWatchPage({
       profileId,
       submitted,
       effectiveFilter,
-      sources,
+      effectiveSources,
+      networks,
     ],
-    enabled: submitted.length > 0,
+    // Wait for the defaults, or the first search would run unfiltered.
+    enabled: submitted.length > 0 && defaults.data !== undefined,
     staleTime: 60_000,
     queryFn: async ({ signal }) => {
       const search = new URLSearchParams({
         q: submitted,
         filter: JSON.stringify(effectiveFilter),
+        sources: effectiveSources.join(","),
+        networks: networks.join(","),
+        artwork: defaults.data?.artwork === false ? "0" : "1",
       });
-      if (sources) search.set("sources", sources.join(","));
       const res = await fetch(`${API}/search?${search}`, { signal });
       if (!res.ok) throw new Error(`Search failed (HTTP ${res.status})`);
       return (await res.json()) as SearchResponseDto;
     },
   });
 
-  const watches = defaults.data?.watches ?? [];
+  const watches = watchList.data?.watches ?? [];
   const chips = useMemo(
-    () => defaultChips(effectiveFilter, []),
-    [effectiveFilter],
+    () => defaultChips(effectiveFilter, networks),
+    [effectiveFilter, networks],
   );
+  const patchFilter = (change: (f: ReleaseFilter) => ReleaseFilter) =>
+    setFilter(change(effectiveFilter));
 
   const refresh = useCallback(
     () => queryClient.invalidateQueries({ queryKey: ["xdcc-watch"] }),
@@ -118,11 +145,22 @@ export function XdccWatchPage({
         profileId,
         query: submitted,
         filter: effectiveFilter,
-        sources: sources ?? SOURCE_IDS,
+        sources: effectiveSources,
+        preferredNetworks: networks,
+        intervalHours: defaults.data?.intervalHours,
+        newness: defaults.data?.newness,
       }),
     });
     await refresh();
-  }, [profileId, submitted, effectiveFilter, sources, refresh]);
+  }, [
+    profileId,
+    submitted,
+    effectiveFilter,
+    effectiveSources,
+    networks,
+    defaults.data,
+    refresh,
+  ]);
 
   const markSeen = useCallback(async () => {
     await fetch(`${API}/releases/seen`, {
@@ -140,6 +178,9 @@ export function XdccWatchPage({
     },
     [refresh],
   );
+
+  const toggle = (list: string[], value: string) =>
+    list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 
   return (
     <Box
@@ -279,24 +320,20 @@ export function XdccWatchPage({
                   onChange={(e) => setQuery(e.target.value)}
                   _focusVisible={{ outline: "none" }}
                   aria-label="Search packs"
+                  autoFocus
                 />
               </Flex>
               {SOURCE_IDS.map((id) => {
-                const on = (sources ?? SOURCE_IDS).includes(id);
+                const on = effectiveSources.includes(id);
                 return (
                   <chakra.button
                     key={id}
                     type="button"
                     aria-pressed={on}
-                    onClick={() =>
-                      setSources((current) => {
-                        const list = current ?? [...SOURCE_IDS];
-                        const next = list.includes(id)
-                          ? list.filter((s) => s !== id)
-                          : [...list, id];
-                        return next.length > 0 ? next : list;
-                      })
-                    }
+                    onClick={() => {
+                      const next = toggle(effectiveSources, id) as SourceId[];
+                      if (next.length > 0) setSources(next);
+                    }}
                     layerStyle={on ? "raised" : "inset"}
                     px="3"
                     py="1.5"
@@ -312,7 +349,7 @@ export function XdccWatchPage({
             </Flex>
           </chakra.form>
 
-          {submitted ? (
+          {defaults.data ? (
             <Flex
               gap="3"
               wrap="wrap"
@@ -322,21 +359,29 @@ export function XdccWatchPage({
               borderBottomWidth="1px"
               borderColor="border"
             >
-              {chips.map((chip) => (
-                <chakra.button
-                  key={chip.id}
-                  type="button"
-                  onClick={() =>
-                    setFilter((f) => liftChip(f ?? emptyFilter(), chip.id))
-                  }
-                  textStyle="meta"
-                  color={chip.negative ? "fg.faint" : "accent.solid"}
-                  textDecoration={chip.negative ? "line-through" : undefined}
-                  cursor="pointer"
-                >
-                  {chip.label} ×
-                </chakra.button>
-              ))}
+              {chips.map((chip) =>
+                chip.fixed ? (
+                  <Text key={chip.id} textStyle="meta" color="accent.solid">
+                    {chip.label}
+                  </Text>
+                ) : (
+                  <chakra.button
+                    key={chip.id}
+                    type="button"
+                    onClick={() => patchFilter((f) => liftChip(f, chip.id))}
+                    textStyle="meta"
+                    color={chip.negative ? "fg.faint" : "accent.solid"}
+                    textDecoration={chip.negative ? "line-through" : undefined}
+                    cursor="pointer"
+                    title="Lift this default for this search"
+                  >
+                    {chip.label} ×
+                  </chakra.button>
+                ),
+              )}
+              {chips.length === 0 ? (
+                <Text textStyle="meta">no defaults applied</Text>
+              ) : null}
               <chakra.button
                 type="button"
                 onClick={() => setAdvanced((v) => !v)}
@@ -346,20 +391,35 @@ export function XdccWatchPage({
               >
                 {advanced ? "advanced ▾" : "advanced ▸"}
               </chakra.button>
+              {filter ? (
+                <chakra.button
+                  type="button"
+                  onClick={() => setFilter(null)}
+                  textStyle="label"
+                  color="link"
+                  cursor="pointer"
+                  title="Back to the widget's defaults"
+                >
+                  reset
+                </chakra.button>
+              ) : null}
               {results.data ? (
                 <Text textStyle="meta" ml="auto">
-                  {results.data.releases.length} releases ·{" "}
-                  {results.data.hidden} hidden
+                  {results.data.releases.length} release
+                  {results.data.releases.length === 1 ? "" : "s"}
+                  {results.data.hidden > 0
+                    ? ` · ${results.data.hidden} hidden`
+                    : ""}
                 </Text>
               ) : null}
             </Flex>
           ) : null}
 
-          {advanced && submitted ? (
+          {advanced && defaults.data ? (
             <Stack gap="2" mb="3" p="3" layerStyle="inset" borderRadius="small">
               <Text textStyle="label">advanced</Text>
               <Flex gap="2" wrap="wrap">
-                {["720p", "1080p", "2160p"].map((res) => {
+                {RESOLUTIONS.map((res) => {
                   const on = effectiveFilter.resolutions.includes(res);
                   return (
                     <chakra.button
@@ -367,15 +427,10 @@ export function XdccWatchPage({
                       type="button"
                       aria-pressed={on}
                       onClick={() =>
-                        setFilter((f) => {
-                          const base = f ?? emptyFilter();
-                          return {
-                            ...base,
-                            resolutions: on
-                              ? base.resolutions.filter((r) => r !== res)
-                              : [...base.resolutions, res],
-                          };
-                        })
+                        patchFilter((f) => ({
+                          ...f,
+                          resolutions: toggle(f.resolutions, res),
+                        }))
                       }
                       layerStyle={on ? "raised" : undefined}
                       px="3"
@@ -389,7 +444,7 @@ export function XdccWatchPage({
                     </chakra.button>
                   );
                 })}
-                {["German", "English", "dual"].map((lang) => {
+                {LANGUAGES.map((lang) => {
                   const on = effectiveFilter.languages.includes(lang);
                   return (
                     <chakra.button
@@ -397,15 +452,10 @@ export function XdccWatchPage({
                       type="button"
                       aria-pressed={on}
                       onClick={() =>
-                        setFilter((f) => {
-                          const base = f ?? emptyFilter();
-                          return {
-                            ...base,
-                            languages: on
-                              ? base.languages.filter((l) => l !== lang)
-                              : [...base.languages, lang],
-                          };
-                        })
+                        patchFilter((f) => ({
+                          ...f,
+                          languages: toggle(f.languages, lang),
+                        }))
                       }
                       layerStyle={on ? "raised" : undefined}
                       px="3"
@@ -438,7 +488,7 @@ export function XdccWatchPage({
                   <ReleaseRow
                     key={release.key}
                     release={release}
-                    showCommands
+                    showCommands={defaults.data?.showCommands !== false}
                   />
                 ))}
                 {results.data && results.data.releases.length > 0 ? (
@@ -456,6 +506,11 @@ export function XdccWatchPage({
                     Nothing matched. Lift a default above, or try fewer words.
                   </Text>
                 )}
+                {results.data ? (
+                  <Box mt="3">
+                    <SourceStatus sources={results.data.sources} />
+                  </Box>
+                ) : null}
               </>
             )
           ) : releases.data && releases.data.releases.length > 0 ? (

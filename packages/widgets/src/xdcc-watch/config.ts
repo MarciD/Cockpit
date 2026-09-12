@@ -20,7 +20,6 @@ export const configSchema = z.object({
   onlyIndexedAfterSubscribe: z.boolean(),
   artwork: z.boolean(),
   showCommands: z.boolean(),
-  resultsPerSource: z.number(),
 });
 
 export type XdccWatchConfig = z.infer<typeof configSchema>;
@@ -38,10 +37,7 @@ export const defaultConfig: XdccWatchConfig = {
   onlyIndexedAfterSubscribe: true,
   artwork: true,
   showCommands: true,
-  resultsPerSource: 50,
 };
-
-export const MAX_RESULTS_PER_SOURCE = 50;
 
 export function splitList(raw: string): string[] {
   return raw
@@ -104,12 +100,5 @@ export function defaultsFromConfig(stored: unknown): DefaultsDto {
     newness: config.onlyIndexedAfterSubscribe ? "indexed-after" : "unseen",
     artwork: config.artwork,
     showCommands: config.showCommands,
-    resultsPerSource: Math.min(
-      Math.max(
-        1,
-        Math.floor(config.resultsPerSource || MAX_RESULTS_PER_SOURCE),
-      ),
-      MAX_RESULTS_PER_SOURCE,
-    ),
   };
 }

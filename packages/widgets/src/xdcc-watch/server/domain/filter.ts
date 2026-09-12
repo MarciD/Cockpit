@@ -1,4 +1,5 @@
 import type { MatchMode, ReleaseFilter } from "../../types";
+import type { IndexerHints } from "./ports";
 import type { Release } from "./release";
 
 const MB = 1024 * 1024;
@@ -16,6 +17,37 @@ const LANGUAGE_CODES: Record<string, string[]> = {
   korean: ["ko"],
   multi: ["multi"],
 };
+
+/**
+ * The word a filename carries for a language, for indexers that match every
+ * query word. English has none (an untagged scene name *is* English) and
+ * "dual" has none either ("DL" also sits in "WEB-DL").
+ */
+const LANGUAGE_QUERY_WORDS: Record<string, string> = {
+  german: "german",
+  french: "french",
+  spanish: "spanish",
+  italian: "italian",
+  japanese: "japanese",
+  korean: "korean",
+  multi: "multi",
+};
+
+const RESOLUTIONS = ["720p", "1080p", "2160p"];
+
+/** What an indexer may push upstream: only unambiguous, single-valued wants. */
+export function hintsFor(filter: ReleaseFilter): IndexerHints {
+  const [resolution, moreRes] = filter.resolutions.map((r) => r.toLowerCase());
+  const [language, moreLang] = filter.languages.map((l) => l.toLowerCase());
+  return {
+    resolution:
+      resolution && !moreRes && RESOLUTIONS.includes(resolution)
+        ? resolution
+        : null,
+    languageWord:
+      language && !moreLang ? (LANGUAGE_QUERY_WORDS[language] ?? null) : null,
+  };
+}
 
 const CODEC_FAMILIES: Record<string, string[]> = {
   x264: ["x264", "h264", "avc"],
@@ -109,9 +141,16 @@ export function matchesQuery(
   return words(q).every((w) => tokens.some((t) => t.startsWith(w)));
 }
 
+/**
+ * Whole tokens only: an exclude of "ts" means the telesync tag, not
+ * "Karambits"; "cam" is a camrip, not "Camera". A multi-word token must
+ * appear as a consecutive run.
+ */
 function containsToken(filename: string, token: string): boolean {
-  const t = words(token).join(" ");
-  return t.length > 0 && words(filename).join(" ").includes(t);
+  const wanted = words(token);
+  if (wanted.length === 0) return false;
+  const have = words(filename);
+  return have.some((_, i) => wanted.every((w, j) => have[i + j] === w));
 }
 
 function languageOk(release: Release, wanted: string[]): boolean {

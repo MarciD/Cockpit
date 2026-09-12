@@ -1,12 +1,18 @@
-import type { Indexer } from "../domain/ports";
+import type { Indexer, IndexerPage, IndexerQuery } from "../domain/ports";
 import type { Pack } from "../domain/release";
 
 const ENDPOINT = "https://xdcc.info/api/v1/search";
 const USER_AGENT =
   "cockpit release watch (personal dashboard; polite, one page per poll)";
 const TIMEOUT_MS = 20_000;
-/** The API allows 200; one modest page per poll is plenty and kinder. */
-const PAGE_MAX = 50;
+/** The documented maximum; one page per poll, never deeper. */
+const PAGE_MAX = 200;
+/** Its `quality` facet spells 2160p as 4K. */
+const QUALITY: Record<string, string> = {
+  "720p": "720p",
+  "1080p": "1080p",
+  "2160p": "4K",
+};
 
 interface Row {
   pack_num?: unknown;
@@ -41,8 +47,10 @@ const seenAt = (value: unknown): Date | null => {
 /**
  * xdcc.info: the broadest index of the three — eight networks including
  * GlobalIRC and CoreIRC, which the others do not carry at all. Its full-text
- * search matches every word (spaces act as wildcards), so the result set is
- * the one a person sees on the site.
+ * search matches every word (spaces act as wildcards), so a language word
+ * appended to the query narrows the page the way a person would narrow it,
+ * and the `quality` facet does the same for the resolution. It also reports
+ * how many packs match in total.
  *
  * It reports `last_seen` but no first-indexed timestamp, so a watch's
  * "indexed after I subscribed" rule falls back to our own first sighting for
@@ -55,9 +63,14 @@ const seenAt = (value: unknown): Date | null => {
 export class XdccInfoIndexer implements Indexer {
   readonly id = "xdccinfo" as const;
 
-  async search(query: string, limit: number): Promise<Pack[]> {
+  async search({ query, limit, hints }: IndexerQuery): Promise<IndexerPage> {
     const url = new URL(ENDPOINT);
-    url.searchParams.set("q", query);
+    url.searchParams.set(
+      "q",
+      hints.languageWord ? `${query} ${hints.languageWord}` : query,
+    );
+    const quality = hints.resolution ? QUALITY[hints.resolution] : undefined;
+    if (quality) url.searchParams.set("quality", quality);
     url.searchParams.set(
       "limit",
       String(Math.min(Math.max(limit, 1), PAGE_MAX)),
@@ -71,7 +84,7 @@ export class XdccInfoIndexer implements Indexer {
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) throw new Error(`xdcc.info responded HTTP ${res.status}`);
-    const json = (await res.json()) as { results?: Row[] };
+    const json = (await res.json()) as { results?: Row[]; total?: unknown };
 
     const packs: Pack[] = [];
     for (const row of json.results ?? []) {
@@ -90,6 +103,6 @@ export class XdccInfoIndexer implements Indexer {
         lastSeenAt: seenAt(row.last_seen),
       });
     }
-    return packs;
+    return { packs, total: num(json.total) };
   }
 }

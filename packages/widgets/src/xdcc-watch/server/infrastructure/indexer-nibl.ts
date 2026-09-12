@@ -1,5 +1,5 @@
 import type { CachedResult } from "../../../server/contract";
-import type { Indexer } from "../domain/ports";
+import type { Indexer, IndexerPage, IndexerQuery } from "../domain/ports";
 import type { Pack } from "../domain/release";
 
 const API = "https://api.nibl.co.uk";
@@ -33,6 +33,7 @@ function niblDate(value: unknown): Date | null {
 /**
  * nibl.co.uk: the anime index on Rizon. `lastModified` behaves as first-seen
  * of a (bot, pack, name, size) tuple; `sizekbits` is bytes despite the name.
+ * Its search matches every word, so the hints go in as words.
  */
 export class NiblIndexer implements Indexer {
   readonly id = "nibl" as const;
@@ -63,9 +64,12 @@ export class NiblIndexer implements Indexer {
     return result.items ?? {};
   }
 
-  async search(query: string, limit: number): Promise<Pack[]> {
+  async search({ query, limit, hints }: IndexerQuery): Promise<IndexerPage> {
     const url = new URL(`${API}/nibl/search/page`);
-    url.searchParams.set("query", query);
+    url.searchParams.set(
+      "query",
+      [query, hints.resolution, hints.languageWord].filter(Boolean).join(" "),
+    );
     url.searchParams.set("page", "0");
     url.searchParams.set("size", String(Math.min(Math.max(limit, 1), 100)));
     url.searchParams.set("sort", "lastModified");
@@ -79,7 +83,10 @@ export class NiblIndexer implements Indexer {
       this.bots(),
     ]);
     if (!res.ok) throw new Error(`nibl responded HTTP ${res.status}`);
-    const json = (await res.json()) as { content?: NiblPack[] };
+    const json = (await res.json()) as {
+      content?: NiblPack[];
+      total?: unknown;
+    };
 
     const packs: Pack[] = [];
     for (const row of json.content ?? []) {
@@ -99,6 +106,9 @@ export class NiblIndexer implements Indexer {
         lastSeenAt: null,
       });
     }
-    return packs;
+    return {
+      packs,
+      total: typeof json.total === "number" ? json.total : null,
+    };
   }
 }

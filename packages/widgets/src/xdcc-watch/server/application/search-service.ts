@@ -1,7 +1,12 @@
 import type { CachedResult } from "../../../server/contract";
 import type { ReleaseFilter, SourceId, SourceStatusDto } from "../../types";
-import { matchesQuery, passesFilter } from "../domain/filter";
-import type { ArtworkProvider, Clock, Indexer } from "../domain/ports";
+import { hintsFor, matchesQuery, passesFilter } from "../domain/filter";
+import type {
+  ArtworkProvider,
+  Clock,
+  Indexer,
+  IndexerHints,
+} from "../domain/ports";
 import {
   groupReleases,
   sortReleases,
@@ -13,6 +18,8 @@ import {
 const SEARCH_TTL_MS = 10 * 60_000;
 /** Posters are one extra request per release; only the top of the list gets them. */
 const ARTWORK_LIMIT = 12;
+/** One page per source and poll; each indexer clamps this to its own maximum. */
+export const MAX_PAGE = 200;
 
 export interface SearchRequest {
   query: string;
@@ -44,6 +51,11 @@ type StoredPack = Omit<Pack, "firstSeenAt" | "lastSeenAt"> & {
   lastSeenAt: string | null;
 };
 
+interface StoredPage {
+  packs: StoredPack[];
+  total: number | null;
+}
+
 const store = (p: Pack): StoredPack => ({
   ...p,
   firstSeenAt: p.firstSeenAt?.toISOString() ?? null,
@@ -56,10 +68,17 @@ const revive = (p: StoredPack): Pack => ({
   lastSeenAt: p.lastSeenAt ? new Date(p.lastSeenAt) : null,
 });
 
+const hintKey = (h: IndexerHints) =>
+  `${h.resolution ?? "-"}:${h.languageWord ?? "-"}`;
+
 /**
  * One search across the enabled indexers: fetched through the shared cache
- * (ten minutes per source and query, stale data on failure), re-checked
- * against the query locally, grouped by release, filtered, sorted newest first.
+ * (ten minutes per source, query and hint, stale data on failure), re-checked
+ * against the query locally, grouped by release, filtered, sorted.
+ *
+ * The filter's single-valued wants travel upstream as hints, so a source
+ * that can narrow its page does — otherwise one page of "recently seen"
+ * packs is a random slice of the index and the filter empties it.
  */
 export class SearchService {
   constructor(
@@ -75,24 +94,30 @@ export class SearchService {
     if (!query)
       return { releases: [], posters: new Map(), sources: [], hidden: 0 };
 
+    const hints = hintsFor(req.filter);
+    const limit = Math.min(Math.max(1, req.limit), MAX_PAGE);
     const packs: Pack[] = [];
     const sources: SourceStatusDto[] = [];
     await Promise.all(
       req.sources.map(async (id) => {
         const indexer = this.indexers.find((i) => i.id === id);
         if (!indexer) return;
-        const key = `xdcc:search:${id}:${req.limit}:${query.toLowerCase()}`;
-        const result = await this.cachedFetch<StoredPack[]>(
+        const key = `xdcc:search:${id}:${limit}:${hintKey(hints)}:${query.toLowerCase()}`;
+        const result = await this.cachedFetch<StoredPage>(
           key,
-          async () => (await indexer.search(query, req.limit)).map(store),
+          async () => {
+            const page = await indexer.search({ query, limit, hints });
+            return { packs: page.packs.map(store), total: page.total };
+          },
           SEARCH_TTL_MS,
           req.force,
         );
-        if (result.items) packs.push(...result.items.map(revive));
+        if (result.items) packs.push(...result.items.packs.map(revive));
         sources.push({
           id,
           ok: !result.error,
-          count: result.items?.length ?? 0,
+          count: result.items?.packs.length ?? 0,
+          total: result.items?.total ?? null,
           error: result.error ?? null,
           cachedAt: result.cachedAt ?? null,
         });
@@ -106,6 +131,7 @@ export class SearchService {
     const now = this.clock.now();
     const kept = sortReleases(
       grouped.filter((r) => passesFilter(r, req.filter, now)),
+      query,
     );
 
     const posters = new Map<string, string | null>();

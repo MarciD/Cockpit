@@ -66,7 +66,10 @@ export interface ReleaseDto {
 export interface SourceStatusDto {
   id: SourceId;
   ok: boolean;
+  /** Packs this source handed back for the page. */
   count: number;
+  /** Packs the source says it has for the query, before any local check; null if it does not say. */
+  total: number | null;
   error: string | null;
   cachedAt: string | null;
 }
@@ -129,5 +132,4 @@ export interface DefaultsDto {
   newness: NewnessRule;
   artwork: boolean;
   showCommands: boolean;
-  resultsPerSource: number;
 }

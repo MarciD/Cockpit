@@ -18,9 +18,8 @@ import {
   shouldAutoPause,
   type Watch,
 } from "../domain/watch";
-import type { SearchService } from "./search-service";
+import { MAX_PAGE, type SearchService } from "./search-service";
 
-const RUN_LIMIT = 50;
 const DIGEST_LINES = 3;
 const INDIVIDUAL_CAP = 5;
 const HOUR_MS = 60 * 60 * 1000;
@@ -98,7 +97,7 @@ export class WatchService {
       filter: watch.filter,
       sources: watch.sources,
       preferredNetworks: watch.preferredNetworks,
-      limit: RUN_LIMIT,
+      limit: MAX_PAGE,
       force: true,
       artwork: false,
     });
