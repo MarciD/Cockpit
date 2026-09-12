@@ -229,9 +229,10 @@ dedupeKey?, dedupeWindowMs? })` from `composition.ts` persists a row in
   (`lsof -ti:4000 | xargs -r kill`), not by name; the retitled process keeps no
   path in its argv, so a name pattern cannot be scoped to one project.
 - **Local hooks are in `.githooks/`** (wired by the root `prepare` script):
-  pre-commit blocks staged secrets/databases and Prettier-checks staged files;
-  pre-push runs `check-types`. Neither builds — `next build` clobbers a running
-  dev server's `.next`, and the image build belongs in CI.
+  pre-commit blocks staged secrets/databases, refuses a `next-env.d.ts` left
+  pointing at a `COCKPIT_DIST_DIR` scratch dir, and Prettier-checks staged
+  files; pre-push runs `check-types`. Neither builds — `next build` clobbers a
+  running dev server's `.next`, and the image build belongs in CI.
 - **After deleting a route**, stale `apps/web/.next/types/**` can fail `check-types`
   — clear `.next/types` (or rebuild).
 - pnpm lives at `~/.local/share/pnpm/bin` — `export PATH="$HOME/.local/share/pnpm/bin:$PATH"`.

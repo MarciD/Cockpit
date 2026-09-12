@@ -24,7 +24,21 @@ if [ -n "$blocked" ]; then
   exit 1
 fi
 
-# 2. Formatting, on staged files only. Fail open if the toolchain is missing —
+# 2. next-env.d.ts is generated, and Next points it at whatever distDir it
+#    last ran with — so a screenshot or scratch server (COCKPIT_DIST_DIR)
+#    leaves a reference to a directory that exists on no other machine. It is
+#    valid TypeScript and Prettier-clean, so nothing else below catches it.
+if staged | tr '\0' '\n' | grep -qx 'apps/web/next-env.d.ts'; then
+  stray=$(git show :apps/web/next-env.d.ts | grep -o '\./\.next-[^/]*' || true)
+  if [ -n "$stray" ]; then
+    printf 'pre-commit: next-env.d.ts points at %s, not ./.next\n' "$stray" >&2
+    printf 'A scratch server wrote that; it breaks check-types elsewhere.\n' >&2
+    printf '\nRestore it: git checkout -- apps/web/next-env.d.ts\n' >&2
+    exit 1
+  fi
+fi
+
+# 3. Formatting, on staged files only. Fail open if the toolchain is missing —
 #    a GUI git client may not have pnpm on PATH, and CI checks this anyway.
 command -v pnpm >/dev/null 2>&1 || exit 0
 [ -n "$(staged | tr -d '\0')" ] || exit 0
