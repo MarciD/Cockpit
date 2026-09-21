@@ -17,7 +17,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.125.0",
+    "@anthropic-ai/sdk": "^0.126.0",
     "@cockpit/db": "workspace:*",
     "@cockpit/integrations": "workspace:*",
     "@cockpit/widget-sdk": "workspace:*",
