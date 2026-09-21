@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@cockpit/project-setup": "workspace:*",
-    "@tanstack/react-query": "^5.102.8",
+    "@tanstack/react-query": "^5.103.1",
     "@types/react": "^19.3.0",
     "react": "^19.3.0",
     "typescript": "^5.9.3"
