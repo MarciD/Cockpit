@@ -21,7 +21,7 @@
     "@cockpit/db": "workspace:*",
     "@cockpit/integrations": "workspace:*",
     "@cockpit/widget-sdk": "workspace:*",
-    "@viren070/parse-torrent-title": "0.8.8",
+    "@viren070/parse-torrent-title": "0.9.1",
     "drizzle-orm": "^0.45.2",
     "fast-xml-parser": "^5.11.1",
     "luxon": "^3.7.2",
@@ -32,16 +32,16 @@
   "peerDependencies": {
     "@chakra-ui/react": "^3",
     "@tanstack/react-query": "^5",
-    "next": "^15.5.25",
+    "next": "^15.5.26",
     "react": "^19"
   },
   "devDependencies": {
     "@chakra-ui/react": "^3.37.0",
     "@cockpit/project-setup": "workspace:*",
-    "@tanstack/react-query": "^5.103.1",
+    "@tanstack/react-query": "^5.103.2",
     "@types/luxon": "^3.7.5",
     "@types/react": "^19.3.0",
-    "next": "^15.5.25",
+    "next": "^15.5.26",
     "react": "^19.3.0",
     "typescript": "^5.9.3"
   }
