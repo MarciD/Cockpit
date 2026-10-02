@@ -24,19 +24,21 @@ if [ -n "$blocked" ]; then
   exit 1
 fi
 
-# 2. next-env.d.ts is generated, and Next points it at whatever distDir it
-#    last ran with — so a screenshot or scratch server (COCKPIT_DIST_DIR)
-#    leaves a reference to a directory that exists on no other machine. It is
-#    valid TypeScript and Prettier-clean, so nothing else below catches it.
-if staged | tr '\0' '\n' | grep -qx 'apps/web/next-env.d.ts'; then
-  stray=$(git show :apps/web/next-env.d.ts | grep -o '\./\.next-[^/]*' || true)
+# 2. next-env.d.ts and tsconfig.json are generated in part, and Next points
+#    them at whatever distDir it last ran with — so a screenshot, scratch or
+#    LaunchAgent build (COCKPIT_DIST_DIR) leaves a reference to a directory
+#    that exists on no other machine. Both stay valid and Prettier-clean, so
+#    nothing else below catches it. (`.next-*` in tsconfig's exclude is fine.)
+for file in apps/web/next-env.d.ts apps/web/tsconfig.json; do
+  staged | tr '\0' '\n' | grep -qx "$file" || continue
+  stray=$(git show ":$file" | grep -oE '\.next-[^"/*]+/' | head -n 1 || true)
   if [ -n "$stray" ]; then
-    printf 'pre-commit: next-env.d.ts points at %s, not ./.next\n' "$stray" >&2
+    printf 'pre-commit: %s points at %s, not .next/\n' "$file" "$stray" >&2
     printf 'A scratch server wrote that; it breaks check-types elsewhere.\n' >&2
-    printf '\nRestore it: git checkout -- apps/web/next-env.d.ts\n' >&2
+    printf '\nRestore it: git checkout -- %s\n' "$file" >&2
     exit 1
   fi
-fi
+done
 
 # 3. Formatting, on staged files only. Fail open if the toolchain is missing —
 #    a GUI git client may not have pnpm on PATH, and CI checks this anyway.

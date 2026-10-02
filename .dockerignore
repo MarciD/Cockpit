@@ -20,6 +20,9 @@ data/
 # Dependencies and build output — reinstalled and rebuilt inside the image.
 **/node_modules/
 **/.next/
+# Other distDirs: the LaunchAgent's .next-service, the screenshot tool's
+# .next-shots. `COPY . .` would otherwise carry a local build into the image.
+**/.next-*/
 **/.turbo/
 **/dist/
 **/out/

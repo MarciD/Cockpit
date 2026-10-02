@@ -146,6 +146,11 @@ protect}, fn)` constructor still fires and stops, and `zodResolver` still
   `drizzle-orm` 0.45.2, `fast-xml-parser` 5.11.1, `sharp` 0.35.4, plus
   `postcss`, `uuid` and `esbuild` via pinned overrides where a parent held them
   back.
+- `moment` 2.30.1 had a path-traversal advisory (GHSA-4p3w-j4w9-5jqw) via a
+  crafted non-string locale name. It is transitive only, through `node-ical`
+  and `moment-timezone`, whose range already allowed the patched 2.31.0, so
+  the fix is a lockfile bump with no override. Dependabot's own update for it
+  had failed.
 
 ## [0.1.0] — 2026-08-31
 
