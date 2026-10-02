@@ -15,10 +15,10 @@
     <string>cockpit</string>
     <key>ProgramArguments</key>
     <array>
-      <string>__PNPM_BIN__</string>
-      <string>-C</string>
-      <string>__COCKPIT_DIR__/apps/web</string>
-      <string>start</string>
+      <!-- The launcher serves its own build (apps/web/.next-service) and
+           builds it first when it is missing. Its file name is what macOS
+           shows under Login Items. The arguments go to `next start`. -->
+      <string>__COCKPIT_DIR__/ops/launchd/Cockpit</string>
       <string>-p</string>
       <string>3000</string>
       <!-- Drop the two lines below to serve the whole LAN instead of just this
@@ -35,8 +35,13 @@
       <string>production</string>
       <key>PORT</key>
       <string>3000</string>
+      <!-- Not .next: `next dev`, `next build` and `rm -rf .next` all touch
+           that folder, and a server whose build vanished keeps serving pages
+           with no JS behind them. -->
+      <key>COCKPIT_DIST_DIR</key>
+      <string>.next-service</string>
       <key>PATH</key>
-      <string>__PNPM_DIR__:/usr/local/bin:/usr/bin:/bin</string>
+      <string>__NODE_DIR__:/usr/local/bin:/usr/bin:/bin</string>
       <!-- Required, unless you keep it out of this file: the passphrase that
            encrypts data/credentials.enc. Generate one with
            `openssl rand -base64 32`.

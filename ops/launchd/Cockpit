@@ -1,0 +1,32 @@
+#!/bin/sh
+# LaunchAgent entry point: serve a production build that nothing else touches.
+# Named "Cockpit" because macOS Login Items lists an agent by its executable.
+#
+# `next start` used to read apps/web/.next, the folder `next dev` and
+# `next build` also write. Deleting or rebuilding it left the agent's server
+# running with no JS behind it: pages rendered, nothing hydrated, and the
+# login form could not be submitted. The agent now gets its own distDir and
+# builds it on boot when it is missing, so a restart always comes up working.
+#
+# Arguments are passed to `next start` (e.g. `-p 3000 -H 127.0.0.1`).
+# Rebuild after pulling changes: see ops/launchd/README.md.
+set -eu
+
+cd "$(dirname "$0")/../../apps/web"
+export COCKPIT_DIST_DIR="${COCKPIT_DIST_DIR:-.next-service}"
+next=node_modules/.bin/next
+
+if [ ! -f "$COCKPIT_DIST_DIR/BUILD_ID" ]; then
+  echo "Cockpit: no build in $COCKPIT_DIST_DIR, building"
+  # next build points next-env.d.ts and tsconfig.json at the distDir it used;
+  # put both back so a service build never shows up as a working-tree change.
+  saved=$(mktemp -d)
+  cp next-env.d.ts tsconfig.json "$saved/"
+  restore() { cp "$saved"/* . && rm -rf "$saved"; }
+  trap restore EXIT
+  NODE_ENV=production "$next" build
+  restore
+  trap - EXIT # exec below would skip an EXIT trap anyway
+fi
+
+exec "$next" start "$@"

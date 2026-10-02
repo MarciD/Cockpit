@@ -36,6 +36,17 @@ at 0.x — minor bumps may still change behaviour.
   Ordering is now by title, then newest episode, then year and gets. The same
   bot and pack reported by two indexes is one offer rather than two.
 
+- The macOS LaunchAgent could serve pages it no longer had the JavaScript for.
+  It ran `next start` from `apps/web/.next`, which `next dev`, `next build` and
+  `rm -rf .next` also touch; once that folder was gone the server kept running
+  and rendering HTML, but every `/_next/static/` chunk returned 400. Nothing
+  hydrated, so behind `COCKPIT_ACCESS_TOKEN` the login form showed an Unlock
+  button that could never be pressed. The agent now runs `ops/launchd/Cockpit`,
+  which serves its own build from `apps/web/.next-service` and builds it on
+  start when it is missing, so a reboot always comes up working. It restores
+  the `next-env.d.ts` and `tsconfig.json` that the build rewrites, and macOS
+  lists it as "Cockpit" under Login Items.
+
 ### Changed
 
 - A Release watch release shows its best offer and folds the rest behind

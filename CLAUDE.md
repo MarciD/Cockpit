@@ -221,6 +221,15 @@ dedupeKey?, dedupeWindowMs? })` from `composition.ts` persists a row in
   `new Cron` in `scheduler.ts` passes `catch: onJobError`, a function rather
   than `true` so a broken job is visible instead of invisibly dead. Work started
   outside croner (the boot warm-up) needs its own `.catch()`.
+- **The LaunchAgent serves `apps/web/.next-service`, never `.next`.** It runs
+  `ops/launchd/Cockpit`, which builds that folder when it is missing and then
+  `exec`s `next start`. Serving from `.next` broke silently: a dev run, a
+  `next build` or an `rm -rf .next` pulled the JS out from under a running
+  server, so HTML still rendered but every chunk 400'd and nothing hydrated
+  (symptom: the `/login` Unlock button never enables). It serves whatever
+  branch is checked out; after a pull, `rm -rf apps/web/.next-service` and
+  `launchctl kickstart -k gui/$(id -u)/de.marceldraeger.cockpit`. It also
+  listens on 4000, so stop it (`launchctl bootout …`) before `pnpm dev`.
 - **`next start` renames its process to `next-server (v…)`**, so a
   `pkill -f "next-server"` run in _any_ other repo on this machine kills
   cockpit's production server. It arrives as SIGTERM, Next shuts down

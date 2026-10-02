@@ -83,8 +83,10 @@ COCKPIT_SECRET="$(openssl rand -base64 32)" pnpm -C apps/web start
 ```
 
 To keep it running in the background — so the scheduler refreshes even with the
-browser closed — install the LaunchAgent: see
-[`ops/launchd/README.md`](../ops/launchd/README.md). On macOS you can also set
+browser closed, and it comes back after a reboot — install the LaunchAgent:
+see [`ops/launchd/README.md`](../ops/launchd/README.md). It serves its own build
+from `apps/web/.next-service` and builds it on first start, so the `pnpm build`
+above is only for running `next start` by hand. On macOS you can also set
 `COCKPIT_KEYCHAIN=1` and store credentials in the system Keychain, in which case
 `COCKPIT_SECRET` isn't needed.
 
