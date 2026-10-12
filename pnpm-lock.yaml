@@ -26,8 +26,8 @@ importers:
   apps/web:
     dependencies:
       '@anthropic-ai/sdk':
-        specifier: ^0.125.0
-        version: 0.125.0(zod@3.25.76)
+        specifier: ^0.133.0
+        version: 0.133.0(zod@3.25.76)
       '@chakra-ui/react':
         specifier: ^3.37.0
         version: 3.37.0(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -93,8 +93,8 @@ importers:
         specifier: ^11.10.0
         version: 11.10.0
       drizzle-orm:
-        specifier: ^0.45.2
-        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@11.10.0)(gel@2.2.0)
+        specifier: ^0.45.4
+        version: 0.45.4(@types/better-sqlite3@7.6.13)(better-sqlite3@11.10.0)(gel@2.2.0)
     devDependencies:
       '@cockpit/project-setup':
         specifier: workspace:*
@@ -106,8 +106,8 @@ importers:
         specifier: ^22.20.5
         version: 22.20.5
       drizzle-kit:
-        specifier: ^0.31.10
-        version: 0.31.10
+        specifier: ^0.31.11
+        version: 0.31.11
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
@@ -167,8 +167,8 @@ importers:
   packages/widgets:
     dependencies:
       '@anthropic-ai/sdk':
-        specifier: ^0.125.0
-        version: 0.125.0(zod@3.25.76)
+        specifier: ^0.133.0
+        version: 0.133.0(zod@3.25.76)
       '@cockpit/db':
         specifier: workspace:*
         version: link:../db
@@ -182,8 +182,8 @@ importers:
         specifier: 0.9.1
         version: 0.9.1
       drizzle-orm:
-        specifier: ^0.45.2
-        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@11.10.0)(gel@2.2.0)
+        specifier: ^0.45.4
+        version: 0.45.4(@types/better-sqlite3@7.6.13)(better-sqlite3@11.10.0)(gel@2.2.0)
       fast-xml-parser:
         specifier: ^5.11.2
         version: 5.11.2
@@ -227,8 +227,8 @@ importers:
 
 packages:
 
-  '@anthropic-ai/sdk@0.125.0':
-    resolution: {integrity: sha512-Hq5wYlXupzJ9M1Fzqjqa3hObcuigEXVZJqSYDgeZGM3wF4qrNERM5Z1OOAeoT9rlod8awJ3uYyJjbQXp1ckIGg==}
+  '@anthropic-ai/sdk@0.133.0':
+    resolution: {integrity: sha512-jlqUN8p8ESTJj+GJnA4KjzbEfF1waEoGzRT8jwytlYGFFgv+/DUQOxlYGvYw10UzhD1kwLqYzxvA3FrTB2YWuQ==}
     hasBin: true
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
@@ -270,6 +270,10 @@ packages:
     resolution: {integrity: sha512-E8lTAYNB1KW+FH+VGJuZM1ioAx2E6oVlvQFRrf5P8ZZmsiJXYAD9vTFV7yyEURNzgh1dFqMZuO6tUwcARbqFCA==}
     engines: {node: '>=6.0.0'}
     hasBin: true
+
+  '@babel/runtime@7.29.10':
+    resolution: {integrity: sha512-NpugTzbKgGrNe45Ui32cN8vCFFMxVtP/9rtfwv0nP5FRDAjvYBxJcLVpYA9mr1jxP6cnIT7x9LUzuDTbWYYNRA==}
+    engines: {node: '>=6.9.0'}
 
   '@babel/runtime@7.29.7':
     resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
@@ -1253,12 +1257,12 @@ packages:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
 
-  drizzle-kit@0.31.10:
-    resolution: {integrity: sha512-7OZcmQUrdGI+DUNNsKBn1aW8qSoKuTH7d0mYgSP8bAzdFzKoovxEFnoGQp2dVs82EOJeYycqRtciopszwUf8bw==}
+  drizzle-kit@0.31.11:
+    resolution: {integrity: sha512-YCYqxTLIB2OCqf6w9/Vef13baBVbwQIPcbT4Y56AfO6B9ajZhDhD8Jkveg/hJvT/iuMloKD/IYYkyMMNhr7Kqg==}
     hasBin: true
 
-  drizzle-orm@0.45.2:
-    resolution: {integrity: sha512-kY0BSaTNYWnoDMVoyY8uxmyHjpJW1geOmBMdSSicKo9CIIWkSxMIj2rkeSR51b8KAPB7m+qysjuHme5nKP+E5Q==}
+  drizzle-orm@0.45.4:
+    resolution: {integrity: sha512-NiM1YZpJ2UxyeE67DpDDZ+Tsw4YLX3trSlkNT7Tm9eKoUNb1LvaAaQzXgYQsWs+AQ9TUmmwMmBOCXuqqxUWKKQ==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -1266,6 +1270,7 @@ packages:
       '@libsql/client': '>=0.10.0'
       '@libsql/client-wasm': '>=0.10.0'
       '@neondatabase/serverless': '>=0.10.0'
+      '@netlify/db': '>=0.4.0'
       '@op-engineering/op-sqlite': '>=2'
       '@opentelemetry/api': ^1.4.1
       '@planetscale/database': '>=1.13'
@@ -1301,6 +1306,8 @@ packages:
       '@libsql/client-wasm':
         optional: true
       '@neondatabase/serverless':
+        optional: true
+      '@netlify/db':
         optional: true
       '@op-engineering/op-sqlite':
         optional: true
@@ -1871,7 +1878,7 @@ packages:
 
 snapshots:
 
-  '@anthropic-ai/sdk@0.125.0(zod@3.25.76)':
+  '@anthropic-ai/sdk@0.133.0(zod@3.25.76)':
     dependencies:
       json-schema-to-ts: 3.1.1
       standardwebhooks: 1.1.1
@@ -1982,6 +1989,8 @@ snapshots:
   '@babel/parser@7.29.8':
     dependencies:
       '@babel/types': 7.29.8
+
+  '@babel/runtime@7.29.10': {}
 
   '@babel/runtime@7.29.7': {}
 
@@ -3097,14 +3106,14 @@ snapshots:
 
   detect-libc@2.1.2: {}
 
-  drizzle-kit@0.31.10:
+  drizzle-kit@0.31.11:
     dependencies:
       '@drizzle-team/brocli': 0.10.2
       '@esbuild-kit/esm-loader': 2.6.5
       esbuild: 0.25.12
       tsx: 4.23.15
 
-  drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@11.10.0)(gel@2.2.0):
+  drizzle-orm@0.45.4(@types/better-sqlite3@7.6.13)(better-sqlite3@11.10.0)(gel@2.2.0):
     optionalDependencies:
       '@types/better-sqlite3': 7.6.13
       better-sqlite3: 11.10.0
@@ -3303,7 +3312,7 @@ snapshots:
 
   json-schema-to-ts@3.1.1:
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.29.10
       ts-algebra: 2.0.0
 
   lines-and-columns@1.2.4: {}
