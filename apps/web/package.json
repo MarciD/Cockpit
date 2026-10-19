@@ -18,13 +18,13 @@
     "@cockpit/widgets": "workspace:*",
     "@emotion/react": "^11.14.0",
     "@hookform/resolvers": "^5.9.1",
-    "@tanstack/react-query": "^5.104.1",
+    "@tanstack/react-query": "^5.104.3",
     "croner": "^10.0.1",
-    "next": "^15.5.27",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
+    "next": "^15.5.28",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "react-grid-layout": "^2.3.0",
-    "react-hook-form": "^7.89.0",
+    "react-hook-form": "^7.90.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
