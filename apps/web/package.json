@@ -18,7 +18,7 @@
     "@cockpit/widgets": "workspace:*",
     "@emotion/react": "^11.14.0",
     "@hookform/resolvers": "^5.9.1",
-    "@tanstack/react-query": "^5.104.3",
+    "@tanstack/react-query": "^5.104.5",
     "croner": "^10.0.1",
     "next": "^15.5.28",
     "react": "^19.3.1",
